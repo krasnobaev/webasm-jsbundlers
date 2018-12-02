@@ -72,7 +72,8 @@ Initial example - https://github.com/DrSensor/rollup-plugin-rust/tree/master/exa
 
 ```bash
 npm i
-npm run build
+npm run start
+<CTRL>+C
 #add 'window.global = window;' as first line of dist/index.js
 #change 'Buffer' to 'Buffer$1' in dist/index.js
 npm run start
