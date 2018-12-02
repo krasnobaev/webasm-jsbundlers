@@ -1,0 +1,4 @@
+[[package]]
+name = "node-wasm"
+version = "0.1.0"
+

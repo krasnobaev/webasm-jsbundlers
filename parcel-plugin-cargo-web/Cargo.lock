@@ -1,0 +1,4 @@
+[[package]]
+name = "parcel_plugin_rustwasm_example"
+version = "0.0.1"
+
