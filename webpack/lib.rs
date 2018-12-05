@@ -1,4 +1,3 @@
-#[macro_use]
 extern crate wasm_bindgen;
 extern crate web_sys;
 
@@ -17,6 +16,7 @@ pub struct FmOsc {
   ctx: AudioContext,
   primary: web_sys::OscillatorNode, /// The primary oscillator.  This will be the fundamental frequency
   gain: web_sys::GainNode,          /// Overall gain (volume) control
+  analyser: web_sys::AnalyserNode,
   fm_gain: web_sys::GainNode,       /// Amount of frequency modulation
   fm_osc: web_sys::OscillatorNode,  /// The oscillator that will modulate the primary oscillator's frequency
   fm_freq_ratio: f32,               /// The ratio between the primary frequency and the fm_osc frequency.
@@ -40,6 +40,7 @@ impl FmOsc {
     let fm_osc = ctx.create_oscillator()?;
     let gain = ctx.create_gain()?;
     let fm_gain = ctx.create_gain()?;
+    let analyser = ctx.create_analyser()?;
 
     // Some initial settings:
     primary.set_type(OscillatorType::Sine);
@@ -48,10 +49,12 @@ impl FmOsc {
     fm_gain.gain().set_value(0.0); // no initial frequency modulation
     fm_osc.set_type(OscillatorType::Sine);
     fm_osc.frequency().set_value(0.0);
+    analyser.set_fft_size(2048);
 
     // Connect the nodes up!
     primary.connect_with_audio_node(&gain)?;
     gain.connect_with_audio_node(&ctx.destination())?;
+    gain.connect_with_audio_node(&analyser)?;
     fm_osc.connect_with_audio_node(&fm_gain)?;
     fm_gain.connect_with_audio_param(&primary.frequency())?;
 
@@ -62,6 +65,7 @@ impl FmOsc {
         ctx,
         primary,
         gain,
+        analyser,
         fm_gain,
         fm_osc,
         fm_freq_ratio: 0.0,
@@ -114,5 +118,25 @@ impl FmOsc {
     self.fm_osc
         .frequency()
         .set_value(self.fm_freq_ratio * self.primary.frequency().value());
+  }
+
+  /* SPECTRUM */
+
+  #[wasm_bindgen]
+  pub fn get_buffer_length(&mut self) -> Result<u32, JsValue> {
+    let buffer_length = self.analyser.frequency_bin_count();
+    Ok(buffer_length)
+  }
+
+  /// This should be between 0 and 1, though higher values are accepted.
+  #[wasm_bindgen]
+  pub fn get_analyser_data(&mut self) -> Result<JsValue, JsValue> {
+    let buffer_length = self.analyser.frequency_bin_count();
+    // let res = Uint8Array::new(&buffer_length);
+    let mut data_array = vec![0u8; buffer_length as usize];
+    self.analyser.get_byte_time_domain_data(&mut data_array[..]);
+
+    // Ok(Uint8Array::new(&data_array[..]))
+    Ok(JsValue::from_serde(&data_array).unwrap())
   }
 }

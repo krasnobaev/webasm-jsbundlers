@@ -2,6 +2,7 @@ dist/
 target/
 .cache/
 pkg/
+bin/
 node_modules/
 
 wasm-pack.log
