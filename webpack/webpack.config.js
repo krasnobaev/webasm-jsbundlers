@@ -10,6 +10,9 @@ module.exports = {
   },
   devServer: {
     contentBase: path.resolve(__dirname, 'dist'),
+    host: '0.0.0.0',
+    // useLocalIp: true,
+    // disableHostCheck: true,
   },
   plugins: [
     new HtmlWebpackPlugin({
