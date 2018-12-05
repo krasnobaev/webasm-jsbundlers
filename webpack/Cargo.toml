@@ -1,6 +1,7 @@
 [package]
 name = "wasmpack_webpack_example"
 version = "0.0.1"
+authors = ["Aleksey Krasnobaev"]
 
 [lib]
 crate-type = ["cdylib"]
@@ -10,11 +11,19 @@ path = "./lib.rs"
 wasm-bindgen = "0.2.25"
 
 [dependencies.web-sys]
-version = "0.3"
+version = "0.3.4"
 features = [
   "Document",
   "Element",
   "HtmlElement",
   "Node",
   "Window",
+
+  'AudioContext',
+  'AudioDestinationNode',
+  'AudioNode',
+  'AudioParam',
+  'GainNode',
+  'OscillatorNode',
+  'OscillatorType'
 ]

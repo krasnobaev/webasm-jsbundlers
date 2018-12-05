@@ -35,7 +35,9 @@ Webpack example shows additional example of writting to DOM from Rust via `web-s
 
 <sup>*</sup> webpack require loading of compiled wasm binary
 
-## plugins info
+## examples info
+
+All examples require global installation of `Rust` and `Cargo`. Some require `wasm-pack`.
 
 ### [parcel-plugin-cargo-web](https://www.npmjs.com/package/parcel-plugin-cargo-web) via [parcel-bundler](https://parceljs.org)
 
@@ -81,10 +83,13 @@ npm run start
 
 ### [@wasm-tool/wasm-pack-plugin](https://www.npmjs.com/package/@wasm-tool/wasm-pack-plugin) via [webpack](https://webpack.js.org)
 
-Initial example - https://github.com/rustwasm/wasm-bindgen/tree/master/examples/add
+[MOVE TO NEXT EXAMPLE] Initial example - https://github.com/rustwasm/wasm-bindgen/tree/master/examples/add
+
+See also - https://github.com/wasm-tool/wasm-pack-plugin/tree/master/example
 
 ```bash
 npm i
+cargo build --target wasm32-unknown-unknown --release
 npm run start
 ```
 
