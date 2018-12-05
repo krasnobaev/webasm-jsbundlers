@@ -161,7 +161,11 @@ import('./pkg')
 })
 .catch(console.error);
 
-/* SPECTRUM */
+/*
+ * SPECTRUM
+ *
+ * see https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API/Visualizations_with_Web_Audio_API
+ */
 
 function draw(canvasCtx, bufferLength, dataArray) {
   // var drawVisual = requestAnimationFrame(draw);

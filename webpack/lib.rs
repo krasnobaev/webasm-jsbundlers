@@ -120,7 +120,11 @@ impl FmOsc {
         .set_value(self.fm_freq_ratio * self.primary.frequency().value());
   }
 
-  /* SPECTRUM */
+  /*
+   * SPECTRUM
+   *
+   * see https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API/Visualizations_with_Web_Audio_API
+   */
 
   #[wasm_bindgen]
   pub fn get_buffer_length(&mut self) -> Result<u32, JsValue> {
