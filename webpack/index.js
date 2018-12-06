@@ -7,6 +7,7 @@ import('./pkg')
   let fm2 = null;
   let inote = 50;
   let base = 50;
+  let intervalid;
 
   const play_button = document.getElementById('play');
   play_button.addEventListener('click', event => {
@@ -20,11 +21,13 @@ import('./pkg')
       let canvasCtx = document.getElementById('spectrum').getContext('2d');
       canvasCtx.clearRect(0, 0, WIDTH, HEIGHT);
 
-      setInterval(() => {
+      intervalid = setInterval(() => {
         draw(canvasCtx, fm.get_buffer_length(), fm.get_analyser_data());
       }, 1);
     } else {
       fm.free();
+      clearInterval(intervalid);
+      intervalid = null;
       fm = null;
     }
   });
