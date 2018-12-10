@@ -2,6 +2,9 @@
 name = "wasmpack_webpack_example"
 version = "0.0.1"
 authors = ["Aleksey Krasnobaev"]
+description = ""
+repository = ""
+license = ""
 
 [lib]
 crate-type = ["cdylib"]
