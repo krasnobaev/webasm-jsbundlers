@@ -1,8 +1,35 @@
 extern crate wasm_bindgen;
 extern crate web_sys;
+extern crate rustfft;
+extern crate serde_derive;
 
 use wasm_bindgen::prelude::*;
-use web_sys::{AudioContext, OscillatorType};
+use web_sys::{AudioContext, OscillatorType, PeriodicWave};
+
+use rustfft::algorithm::DFT;
+use rustfft::FFT;
+use rustfft::num_complex::Complex;
+use rustfft::num_traits::Zero;
+
+/*
+ * DFT
+ */
+
+pub fn getdft(data: &JsValue) -> Result<Vec<Vec<f32>>, JsValue> {
+  let data2: Vec<f32> = data.into_serde().unwrap();
+  let buflen: usize = data2.len();
+
+  let mut input:  Vec<Complex<f32>> = data2.iter().map(|&x| Complex::new(x, 0.0f32)).collect();
+  let mut output: Vec<Complex<f32>> = vec![Zero::zero(); buflen];
+  let dft = DFT::new(buflen, false);
+  dft.process(&mut input, &mut output);
+
+  let real: Vec<_> = output.iter().map(|&x| x.re).collect();
+  let imag: Vec<_> = output.iter().map(|&x| x.im).collect();
+
+  // Ok(JsValue::from_serde(&vec![&real, &imag]).unwrap())
+  Ok(vec![real, imag].to_vec())
+}
 
 /// Converts a midi note to frequency
 ///
@@ -10,6 +37,10 @@ use web_sys::{AudioContext, OscillatorType};
 pub fn midi_to_freq(note: u8) -> f32 {
   27.5 * 2f32.powf((note as f32 - 21.0) / 12.0)
 }
+
+/*
+ * Synth
+ */
 
 #[wasm_bindgen]
 pub struct FmOsc {
@@ -32,7 +63,7 @@ impl Drop for FmOsc {
 #[wasm_bindgen]
 impl FmOsc {
   #[wasm_bindgen(constructor)]
-  pub fn new() -> Result<FmOsc, JsValue> {
+  pub fn new(data: &JsValue) -> Result<FmOsc, JsValue> {
     let ctx = web_sys::AudioContext::new()?;
 
     // Create our web audio objects.
@@ -42,8 +73,14 @@ impl FmOsc {
     let fm_gain = ctx.create_gain()?;
     let analyser = ctx.create_analyser()?;
 
+    let pdata: Vec<Vec<f32>> = getdft(data)?;
+    let mut real: Vec<f32> = pdata[0][..].to_vec();
+    let mut imag: Vec<f32> = pdata[1][..].to_vec();
+    let customwave = ctx.create_periodic_wave(&mut real, &mut imag)?;
+
     // Some initial settings:
-    primary.set_type(OscillatorType::Sine);
+    // primary.set_type(OscillatorType::Sine);
+    primary.set_periodic_wave(&customwave);
     primary.frequency().set_value(440.0); // A4 note
     gain.gain().set_value(0.0);    // starts muted
     fm_gain.gain().set_value(0.0); // no initial frequency modulation

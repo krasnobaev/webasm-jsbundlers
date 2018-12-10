@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build": "webpack index.js",
-    "clean": "rm -rf dist pkg target wasm-pack.log",
+    "clean": "rm -rf bin dist pkg target wasm-pack.log",
     "start": "webpack-dev-server -d"
   },
   "author": "",

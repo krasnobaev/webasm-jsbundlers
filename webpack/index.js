@@ -12,7 +12,23 @@ import('./pkg')
   const play_button = document.getElementById('play');
   play_button.addEventListener('click', event => {
     if (fm === null) {
-      fm = new module.FmOsc();
+
+      const len = 50;
+      // let sharkFinValues = new Array(len).fill(0).map(i => sharkFin(i / len) * len);
+      let sharkFinValues = new Array(250).fill(0).map((_, i) => square(i, 250) * 250);
+      // let sharkFinValues = new Array(len).fill(0).map((_, i) => Math.cos(i * Math.PI/2));
+      // let sharkFinValues = [
+      //   -1, -0.8, -0.6, -0.4, -0.2,
+      //   0,
+      //   0.2, 0.4, 0.6, 0.8, 1,
+      // ];
+
+      // var ft = new DFT(sharkFinValues.length);
+      // ft.forward(sharkFinValues);
+      // var lfoTable = audioContext.createPeriodicWave(ft.real, ft.imag);
+      // console.dir(module.getdft(sharkFinValues));
+
+      fm = new module.FmOsc(sharkFinValues);
       fm.set_note(inote);
       fm.set_fm_frequency(0);
       fm.set_fm_amount(0);
@@ -195,3 +211,16 @@ function draw(canvasCtx, bufferLength, dataArray) {
   canvasCtx.lineTo(WIDTH, HEIGHT / 2);
   canvasCtx.stroke();
 };
+
+function sharkFin(x) {
+  if (x < 0) return 0;
+  x = x * 2 % 2 + 0.05;
+  if (x < 1) {
+    return  1 + Math.log(x) / 4;
+  }
+  return Math.pow(-x, -2);
+}
+
+function square(x, len) {
+  return x/len > 0.5 ? 1 : -1;
+}
