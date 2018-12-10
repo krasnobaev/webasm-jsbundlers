@@ -16,10 +16,20 @@
   "devDependencies": {
     "@wasm-tool/wasm-pack-plugin": "0.1.6",
     "@webpack-cli/init": "^0.1.2",
+    "css-loader": "^2.0.0",
+    "file-loader": "^2.0.0",
     "gh-pages": "^2.0.1",
     "html-webpack-plugin": "^3.2.0",
-    "webpack": "^4.25.1",
+    "node-sass": "^4.11.0",
+    "postcss-loader": "^3.0.0",
+    "sass-loader": "^7.1.0",
+    "style-loader": "^0.23.1",
+    "webpack": "^4.27.1",
     "webpack-cli": "^3.1.2",
     "webpack-dev-server": "^3.1.10"
+  },
+  "dependencies": {
+    "jquery": "^3.3.1",
+    "jquery-knob": "^1.2.11"
   }
 }

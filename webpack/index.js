@@ -1,9 +1,16 @@
+import './style.sass';
+
 const WIDTH = 600;
 const HEIGHT = 800;
 
+let fm = null;
+
+import './node_modules/jquery-knob';
+
 import('./pkg')
 .then(module => {
-  let fm = null;
+
+  fm = null;
   let fm2 = null;
   let inote = 50;
   let base = 50;
@@ -156,25 +163,54 @@ import('./pkg')
     console.log(inote);
   });
 
-  const primary_slider = document.getElementById('primary_input');
-  primary_slider.addEventListener('input', event => {
-    if (fm) {
-      fm.set_note(Number(event.target.value));
-    }
+  $('#primary_freq').knob({
+    label: 'Primary frequency',
+    value: 50,
+    min: 30,
+    max: 80,
+    angleOffset: -125,
+    angleArc: 250,
+    width: 100,
+    height: 100,
+    'change' : value => {
+      if (fm) {
+        fm.set_primary_frequency(Number(value));
+      }
+    },
   });
 
-  const fm_freq = document.getElementById('fm_freq');
-  fm_freq.addEventListener('input', event => {
-    if (fm) {
-      fm.set_fm_frequency(Number(event.target.value));
-    }
+  $('#fm_freq').knob({
+    label: 'Modulation frequency',
+    value: 0,
+    min: 0,
+    max: 3,
+    step: 0.05,
+    angleOffset: -125,
+    angleArc: 250,
+    width: 100,
+    height: 100,
+    'change' : value => {
+      if (fm) {
+        fm.set_fm_frequency(Number(value));
+      }
+    },
   });
 
-  const fm_amount = document.getElementById('fm_amount');
-  fm_amount.addEventListener('input', event => {
-    if (fm) {
-      fm.set_fm_amount(Number(event.target.value));
-    }
+  $('#fm_amount').knob({
+    label: 'Modulation amount',
+    value: 0,
+    min: 0,
+    max: 3,
+    step: 0.05,
+    angleOffset: -125,
+    angleArc: 250,
+    width: 100,
+    height: 100,
+    'change' : value => {
+      if (fm) {
+        fm.set_fm_amount(Number(value));
+      }
+    },
   });
 
 })

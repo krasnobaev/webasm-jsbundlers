@@ -3,25 +3,15 @@
 </head>
 
 <body>
-  <div id="hello"></div>
-  <div id="sum"></div>
+  <p>(headphone users, please make sure your volume is not too loud!)</p>
 
-  <input id="play" type="button" value="⏯"/>
-  (headphone users, please make sure your volume is not too loud!)
-
-  <div>
-    Primary frequency: <input type="range" min="30" max="80" value="50" style="width: 400px" id="primary_input"/>
+  <div class="controls">
+    <input id="play" type="button" value="⏯"/>
+    <span id="primary_freq" class="knob" >Primary frequency</span>
+    <span id="fm_freq" class="knob" >Modulation frequency</span>
+    <span id="fm_amount" class="knob" >Modulation amount</span>
+    <input id="play2" type="button" value="⏯"/>
   </div>
-
-  <div>
-    Modulation frequency: <input type="range" min="0" max="3" value="0" step="0.05"  style="width: 400px" id="fm_freq"/>
-  </div>
-
-  <div>
-    Modulation amount: <input type="range" min="0" max="3" value="0" step="0.05"  style="width: 400px" id="fm_amount"/>
-  </div>
-
-  <input id="play2" type="button" value="⏯"/>
 
   <canvas id="spectrum" width="600px" height="800px" />
 

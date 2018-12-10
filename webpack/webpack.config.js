@@ -1,6 +1,7 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const WasmPackPlugin = require('@wasm-tool/wasm-pack-plugin');
+const webpack = require('webpack');
 
 module.exports = {
   entry: './index.js',
@@ -14,12 +15,26 @@ module.exports = {
     // useLocalIp: true,
     // disableHostCheck: true,
   },
+  module: {
+    rules: [{
+      test: /\.(sa|sc|c)ss$/,
+      include: path.resolve(__dirname, './'),
+      loaders: [
+        require.resolve('style-loader'),
+        require.resolve('css-loader'),
+        require.resolve('sass-loader')
+      ]
+    }]
+  },
   plugins: [
     new HtmlWebpackPlugin({
       template: 'index.html'
     }),
     new WasmPackPlugin({
       crateDirectory: path.resolve(__dirname, '.')
+    }),
+    new webpack.ProvidePlugin({
+      '$': 'jquery'
     }),
   ],
   mode: 'development'
