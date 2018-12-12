@@ -281,26 +281,26 @@ function square(x, len) {
   var portamento=0.05;  // portamento/glide speed
   var activeNotes = []; // the stack of actively-pressed keys
 
-  // window.addEventListener('load', function() {
-  //   // patch up prefixes
-  //   window.AudioContext = window.AudioContext||window.webkitAudioContext;
+  window.addEventListener('load', function() {
+    // patch up prefixes
+    window.AudioContext = window.AudioContext||window.webkitAudioContext;
 
-  //   context = new AudioContext();
-  //   if (navigator.requestMIDIAccess) {
-  //     navigator.requestMIDIAccess().then( onMIDIInit, onMIDIReject );
-  //   } else {
-  //     alert("No MIDI support present in your browser. You're gonna have a bad time.")
-  //   }
+    context = new AudioContext();
+    if (navigator.requestMIDIAccess) {
+      navigator.requestMIDIAccess().then( onMIDIInit, onMIDIReject );
+    } else {
+      alert("No MIDI support present in your browser. You're gonna have a bad time.")
+    }
 
-  //   // set up the basic oscillator chain, muted to begin with.
-  //   oscillator = context.createOscillator();
-  //   oscillator.frequency.setValueAtTime(110, 0);
-  //   envelope = context.createGain();
-  //   oscillator.connect(envelope);
-  //   envelope.connect(context.destination);
-  //   envelope.gain.value = 0.0;  // Mute the sound
-  //   oscillator.start(0);  // Go ahead and start up the oscillator
-  // });
+    // set up the basic oscillator chain, muted to begin with.
+    oscillator = context.createOscillator();
+    oscillator.frequency.setValueAtTime(110, 0);
+    envelope = context.createGain();
+    oscillator.connect(envelope);
+    envelope.connect(context.destination);
+    envelope.gain.value = 0.0;  // Mute the sound
+    oscillator.start(0);  // Go ahead and start up the oscillator
+  });
 
   function onMIDIInit(midi) {
     midiAccess = midi;
