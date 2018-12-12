@@ -7,7 +7,6 @@ let fm = null;
 
 import './node_modules/jquery-knob';
 
-window.addEventListener('load', function() {
 import('./pkg')
 .then(module => {
 
@@ -37,10 +36,6 @@ import('./pkg')
       // console.dir(module.getdft(sharkFinValues));
 
       fm = new module.FmOsc(sharkFinValues);
-      initMidiInput(fm.midiinputevthandler);
-
-      new module.Provider(sharkFinValues, initMidiInput());
-
       fm.set_note(inote);
       fm.set_fm_frequency(0);
       fm.set_fm_amount(0);
@@ -53,7 +48,6 @@ import('./pkg')
         draw(canvasCtx, fm.get_buffer_length(), fm.get_analyser_data());
       }, 1);
     } else {
-      // midiinput = null;
       fm.free();
       clearInterval(intervalid);
       intervalid = null;
@@ -219,46 +213,8 @@ import('./pkg')
     },
   });
 
-  /* MIDI */
-  // var midiinput;
-
-  function initMidiInput () {
-    // midiinput = new module.MIDIInput(fm);
-
-    if (navigator.requestMIDIAccess) {
-      navigator.requestMIDIAccess().then( _onMIDIInit, _onMIDIReject );
-    } else {
-      alert("No MIDI support present in your browser. You're gonna have a bad time.")
-    }
-
-    let MIDIMessageEventHandler = function (fn) {
-      return fn();
-    };
-
-    function _onMIDIInit(midi) {
-      midiAccess = midi;
-
-      var haveAtLeastOneDevice=false;
-      var inputs = midiAccess.inputs.values();
-      for ( var input = inputs.next(); input && !input.done; input = inputs.next()) {
-        input.value.onmidimessage = MIDIMessageEventHandler.bind(this);
-        haveAtLeastOneDevice = true;
-      }
-      if (!haveAtLeastOneDevice)
-        alert("No MIDI input devices present.  You're gonna have a bad time.");
-    }
-
-    function _onMIDIReject(err) {
-      alert("The MIDI system failed to start.  You're gonna have a bad time.");
-    }
-
-    return MIDIMessageEventHandler;
-  };
-
 })
 .catch(console.error);
-});
-
 
 /*
  * SPECTRUM

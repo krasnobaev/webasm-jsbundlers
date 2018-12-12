@@ -2,46 +2,14 @@ extern crate wasm_bindgen;
 extern crate web_sys;
 extern crate rustfft;
 extern crate serde_derive;
-// extern crate wasm_bindgen_futures;
-// extern crate futures;
 
 use wasm_bindgen::prelude::*;
-use web_sys::{
-  AudioContext,
-  // Navigator,
-  OscillatorType,
-  // PeriodicWave
-};
+use web_sys::{AudioContext, OscillatorType, PeriodicWave};
 
 use rustfft::algorithm::DFT;
 use rustfft::FFT;
 use rustfft::num_complex::Complex;
 use rustfft::num_traits::Zero;
-
-/* Provider */
-#[wasm_bindgen]
-pub struct Provider {
-  fmosc: FmOsc,
-  midiinput: MIDIInput,
-}
-
-#[wasm_bindgen]
-impl Provider {
-  #[wasm_bindgen(constructor)]
-  pub fn new(data: &JsValue) -> Result<Provider, JsValue> {
-    let fmosc = FmOsc::new(data);
-    let midiinput = MIDIInput::new();
-
-    Ok(FmOsc {
-        fmosc,
-        midiinput
-    })
-  }
-}
-
-// MIDI
-// use futures::{Async, Future, Poll};
-// use wasm_bindgen_futures::{JsFuture, future_to_promise};
 
 /*
  * DFT
@@ -69,41 +37,6 @@ pub fn getdft(data: &JsValue) -> Result<Vec<Vec<f32>>, JsValue> {
 pub fn midi_to_freq(note: u8) -> f32 {
   27.5 * 2f32.powf((note as f32 - 21.0) / 12.0)
 }
-
-/* NextTick */
-
-/// A future that becomes ready after a tick of the micro task queue.
-// pub struct NextTick {
-//   inner: JsFuture,
-// }
-// impl NextTick {
-//   /// Construct a new `NextTick` future.
-//   pub fn new() -> NextTick {
-//     // Create a resolved promise that will run its callbacks on the next
-//     // tick of the micro task queue.
-//     let promise = js_sys::Promise::resolve(&JsValue::NULL);
-//     // Convert the promise into a `JsFuture`.
-//     let inner = JsFuture::from(promise);
-//     NextTick { inner }
-//   }
-// }
-// impl Future for NextTick {
-//   type Item = ();
-//   type Error = ();
-
-//   fn poll(&mut self) -> Poll<(), ()> {
-//     // Polling a `NextTick` just forwards to polling if the inner promise is
-//     // ready.
-//     match self.inner.poll() {
-//       Ok(Async::Ready(_)) => Ok(Async::Ready(())),
-//       Ok(Async::NotReady) => Ok(Async::NotReady),
-//       Err(_) => unreachable!(
-//         "We only create NextTick with a resolved inner promise, never \
-//           a rejected one, so we can't get an error here"
-//       ),
-//     }
-//   }
-// }
 
 /*
  * Synth
@@ -248,104 +181,3 @@ impl FmOsc {
     Ok(JsValue::from_serde(&data_array).unwrap())
   }
 }
-
-/* MIDI controllment */
-
-#[wasm_bindgen]
-pub struct MIDIInput {
-  ctx: AudioContext,                           // the Web Audio "context" object
-  // midiAccess: null,                          // the MIDIAccess object.
-  osc: web_sys::OscillatorNode,                 // the single oscillator
-  env: web_sys::GainNode,                       // the envelope for the single oscillator
-  attack: f32,                                  // attack speed
-  release: f32,                                 // release speed
-  portamento: f32,                              // portamento/glide speed
-  // activeNotes: [],                           // the stack of actively-pressed keys
-}
-
-#[wasm_bindgen]
-impl MIDIInput {
-
-  #[wasm_bindgen(constructor)]
-  pub fn new(ctx: &AudioContext, set_note: Fn(T) -> ()) -> Result<MIDIInput, JsValue> {
-    // let ctx = web_sys::AudioContext::new()?;
-    // let promise = Navigator::request_midi_access(web_sys::Navigator); // ???
-
-    // set up the basic oscillator chain, muted to begin with.
-    let osc = ctx.create_oscillator()?;
-    osc.frequency().set_value_at_time(110.0f32, 0.0f64);
-    let env = ctx.create_gain()?;
-    osc.connect_with_audio_param(&env.gain());
-    env.connect_with_audio_node(&ctx.destination());
-    env.gain().set_value(0.0);  // Mute the sound
-    osc.start();                // Go ahead and start up the oscillator
-
-    Ok(MIDIInput {
-        ctx,
-        fm,
-        osc,
-        env,
-        attack: 0.5f32,
-        release: 0.5f32,
-        portamento: 0.05f32,
-    })
-  }
-
-  // pub fn onMIDIInit(&mut self, midi) {
-  //   midiAccess = midi;
-
-  //   let haveAtLeastOneDevice = false;
-  //   let inputs = midiAccess.inputs.values();
-  //   for ( let input = inputs.next(); input && !input.done; input = inputs.next()) {
-  //     input.value.onmidimessage = MIDIMessageEventHandler;
-  //     haveAtLeastOneDevice = true;
-  //   }
-
-  //   if (!haveAtLeastOneDevice) {
-  //     alert("No MIDI input devices present.  You're gonna have a bad time.");
-  //   }
-  // }
-
-  // pub fn onMIDIReject(&mut self, err) {
-  //   alert("The MIDI system failed to start.  You're gonna have a bad time.");
-  // }
-
-  pub fn MIDIMessageEventHandler(&mut self, jsval: &JsValue) {
-    let data: Vec<u8> = jsval.into_serde().unwrap();
-    let midisignal = data[0] & 0xf0u8;
-
-    // Mask off the lower nibble (MIDI channel, which we don't care about)
-    match midisignal {
-      // if velocity != 0, this is a note-on message
-      0x90u8 => if data[2] != 0 { self.noteOn(&data[1]) },
-      // if velocity == 0, fall thru: it's a note-off.  MIDI's weird, y'all.
-      0x80u8 => self.noteOff(&data[1]),
-      _ => ()
-    }
-  }
-
-  fn noteOn(&mut self, noteNumber: &u8) {
-    self.fm.set_note(*noteNumber);
-    // activeNotes.push( noteNumber );
-    // oscillator.frequency.cancelScheduledValues(0);
-    // oscillator.frequency.setTargetAtTime( frequencyFromNoteNumber(noteNumber), 0, portamento );
-    // envelope.gain.cancelScheduledValues(0);
-    // envelope.gain.setTargetAtTime(1.0, 0, attack);
-  }
-
-  fn noteOff(&mut self, noteNumber: &u8) {
-    // var position = activeNotes.indexOf(noteNumber);
-    // if (position!=-1) {
-    //   activeNotes.splice(position,1);
-    // }
-    // if (activeNotes.length == 0) {  // shut off the envelope
-    //   envelope.gain.cancelScheduledValues(0);
-    //   envelope.gain.setTargetAtTime(0.0, 0, release );
-    // } else {
-    //   oscillator.frequency.cancelScheduledValues(0);
-    //   oscillator.frequency.setTargetAtTime( frequencyFromNoteNumber(activeNotes[activeNotes.length-1]), 0, portamento );
-    // }
-  }
-
-}
-
