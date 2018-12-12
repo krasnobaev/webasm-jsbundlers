@@ -6,6 +6,15 @@
   <p>(headphone users, please make sure your volume is not too loud!)</p>
 
   <div class="controls">
+
+    <span>primary wavetype</span>
+    <select id="pr_wave" name="wavetype" change="setwave">
+      <option value="sin">sin</option>
+      <option value="sqr">square</option>
+      <option value="tri">triangle</option>
+      <option value="saw">saw</option>
+    </select>
+
     <input id="play" type="button" value="⏯"/>
     <span id="primary_freq" class="knob" >Primary frequency</span>
     <span id="fm_freq" class="knob" >Modulation frequency</span>

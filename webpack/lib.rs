@@ -48,6 +48,7 @@ pub struct FmOsc {
   primary: web_sys::OscillatorNode, /// The primary oscillator.  This will be the fundamental frequency
   gain: web_sys::GainNode,          /// Overall gain (volume) control
   analyser: web_sys::AnalyserNode,
+  pr_wave_type: u8,
   fm_gain: web_sys::GainNode,       /// Amount of frequency modulation
   fm_osc: web_sys::OscillatorNode,  /// The oscillator that will modulate the primary oscillator's frequency
   fm_freq_ratio: f32,               /// The ratio between the primary frequency and the fm_osc frequency.
@@ -73,14 +74,13 @@ impl FmOsc {
     let fm_gain = ctx.create_gain()?;
     let analyser = ctx.create_analyser()?;
 
-    let pdata: Vec<Vec<f32>> = getdft(data)?;
-    let mut real: Vec<f32> = pdata[0][..].to_vec();
-    let mut imag: Vec<f32> = pdata[1][..].to_vec();
-    let customwave = ctx.create_periodic_wave(&mut real, &mut imag)?;
+    // let pdata: Vec<Vec<f32>> = getdft(data)?;
+    // let mut real: Vec<f32> = pdata[0][..].to_vec();
+    // let mut imag: Vec<f32> = pdata[1][..].to_vec();
+    // let customwave = ctx.create_periodic_wave(&mut real, &mut imag)?;
 
     // Some initial settings:
-    // primary.set_type(OscillatorType::Sine);
-    primary.set_periodic_wave(&customwave);
+    primary.set_type(OscillatorType::Sine);
     primary.frequency().set_value(440.0); // A4 note
     gain.gain().set_value(0.0);    // starts muted
     fm_gain.gain().set_value(0.0); // no initial frequency modulation
@@ -103,11 +103,35 @@ impl FmOsc {
         primary,
         gain,
         analyser,
+        pr_wave_type: 1,
         fm_gain,
         fm_osc,
         fm_freq_ratio: 0.0,
         fm_gain_ratio: 0.0,
     })
+  }
+
+  /// This should be between 0 and 1, though higher values are accepted.
+  #[wasm_bindgen]
+  pub fn set_wave_type(&mut self, wave: &str) {
+    self.pr_wave_type = match wave {
+      // "cst" => 0,
+      "sin" => 1,
+      "tri" => 2,
+      "sqr" => 3,
+      "saw" => 4,
+      _ => 255,
+    };
+
+    match self.pr_wave_type {
+      // 0 => self.primary.set_periodic_wave(&customwave);,
+      1 => self.primary.set_type(OscillatorType::Sine),
+      2 => self.primary.set_type(OscillatorType::Triangle),
+      3 => self.primary.set_type(OscillatorType::Square),
+      4 => self.primary.set_type(OscillatorType::Sawtooth),
+      _ => ()
+    };
+
   }
 
   /// Sets the gain for this oscillator, between 0.0 and 1.0.

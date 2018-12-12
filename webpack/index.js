@@ -213,6 +213,10 @@ import('./pkg')
     },
   });
 
+  $('#pr_wave').change(function () {
+    fm.set_wave_type(this.value);
+  });
+
 })
 .catch(console.error);
 
