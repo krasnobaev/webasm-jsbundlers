@@ -155,22 +155,6 @@ import('./pkg')
     console.log(inote);
   });
 
-  $('#primary_freq').knob({
-    label: 'Primary frequency',
-    value: 50,
-    min: 30,
-    max: 80,
-    angleOffset: -125,
-    angleArc: 250,
-    width: 100,
-    height: 100,
-    'change' : value => {
-      if (fm) {
-        fm.set_primary_frequency(Number(value));
-      }
-    },
-  });
-
   $('#fm_freq').knob({
     label: 'Modulation frequency',
     value: 0,
@@ -244,8 +228,12 @@ import('./pkg')
   $('#osc1_gain').val(0.8).trigger('change');
   $('#ms_gain').val(0.8).trigger('change');
 
-  $('#pr_wave').change(function () {
-    fm.set_wave_type(this.value);
+  $('#osc1_wave').change(function () {
+    fm.set_osc1_wave_type(this.value);
+  });
+
+  $('#osc2_wave').change(function () {
+    fm.set_osc2_wave_type(this.value);
   });
 
 })

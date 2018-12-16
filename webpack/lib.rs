@@ -45,16 +45,19 @@ pub fn midi_to_freq(note: u8) -> f32 {
 #[wasm_bindgen]
 pub struct FmOsc {
   ctx: AudioContext,
-  primary: web_sys::OscillatorNode, /// The primary oscillator.  This will be the fundamental frequency
-  gain: web_sys::GainNode,          /// Overall gain (volume) control
-  pr_wave_type: u8,
-  fm_gain: web_sys::GainNode,       /// Amount of frequency modulation
-  fm_osc: web_sys::OscillatorNode,  /// The oscillator that will modulate the primary oscillator's frequency
-  fm_freq_ratio: f32,               /// The ratio between the primary frequency and the fm_osc frequency.
-  fm_gain_ratio: f32,
+  osc1: web_sys::OscillatorNode,  // this will be the fundamental frequency
+  osc1_wave_type: u8,
+  osc1_gain: web_sys::GainNode,
+
+  osc2: web_sys::OscillatorNode,  // this will modulate the osc1 oscillator's frequency
+  osc2_wave_type: u8,
+  osc2_gain: web_sys::GainNode,   // Amount of frequency modulation
+  osc2_gain_value: f32,
+
+  fmfreq_1_to_2: f32,             // The ratio between the osc1 frequency and the osc2 frequency.
 
   analyser: web_sys::AnalyserNode,
-  ms_gain: web_sys::GainNode,   // Overall gain (volume) control
+  ms_gain: web_sys::GainNode,     // Overall gain (volume) control
 }
 
 impl Drop for FmOsc {
@@ -70,10 +73,10 @@ impl FmOsc {
     let ctx = web_sys::AudioContext::new()?;
 
     // Create our web audio objects.
-    let primary = ctx.create_oscillator()?;
-    let fm_osc = ctx.create_oscillator()?;
-    let fm_gain = ctx.create_gain()?;
-    let gain = ctx.create_gain()?;
+    let osc1 = ctx.create_oscillator()?;
+    let osc2 = ctx.create_oscillator()?;
+    let osc1_gain = ctx.create_gain()?;
+    let osc2_gain = ctx.create_gain()?;
 
     let analyser = ctx.create_analyser()?;
     let ms_gain = ctx.create_gain()?;
@@ -84,46 +87,48 @@ impl FmOsc {
     // let customwave = ctx.create_periodic_wave(&mut real, &mut imag)?;
 
     // Some initial settings:
-    primary.set_type(OscillatorType::Sine);
-    primary.frequency().set_value(440.0); // A4 note
-    gain.gain().set_value(0.0);    // starts muted
-    fm_gain.gain().set_value(0.0); // no initial frequency modulation
-    fm_osc.set_type(OscillatorType::Sine);
-    fm_osc.frequency().set_value(0.0);
+    osc1.set_type(OscillatorType::Sine);
+    osc1.frequency().set_value(440.0); // A4 note
+    osc1_gain.gain().set_value(0.0);    // starts muted
+    osc2_gain.gain().set_value(0.0); // no initial frequency modulation
+    osc2.set_type(OscillatorType::Sine);
+    osc2.frequency().set_value(0.0);
     analyser.set_fft_size(2048);
     ms_gain.gain().set_value(0.0); // starts muted
 
     // Connect the nodes up!
-    primary.connect_with_audio_node(&gain)?;
-    fm_osc.connect_with_audio_node(&fm_gain)?;
-    fm_gain.connect_with_audio_param(&primary.frequency())?;
-    gain.connect_with_audio_node(&ms_gain)?;
-    gain.connect_with_audio_node(&analyser)?;
+    osc1.connect_with_audio_node(&osc1_gain)?;
+    osc2.connect_with_audio_node(&osc2_gain)?;
+    osc2_gain.connect_with_audio_param(&osc1.frequency())?;
+    osc1_gain.connect_with_audio_node(&ms_gain)?;
+    osc1_gain.connect_with_audio_node(&analyser)?;
 
     ms_gain.connect_with_audio_node(&ctx.destination())?;
 
-    primary.start()?;
-    fm_osc.start()?;
+    osc1.start()?;
+    osc2.start()?;
 
     Ok(FmOsc {
         ctx,
-        primary,
-        gain,
-        pr_wave_type: 1,
-        fm_gain,
-        fm_osc,
-        fm_freq_ratio: 0.0,
-        fm_gain_ratio: 0.0,
+        osc1,
+        osc1_wave_type: 1,
+        osc1_gain,
+
+        osc2,
+        osc2_wave_type: 1,
+        osc2_gain,
+        osc2_gain_value: 0.0,
+
+        fmfreq_1_to_2: 0.0,
 
         analyser,
         ms_gain,
     })
   }
 
-  /// This should be between 0 and 1, though higher values are accepted.
   #[wasm_bindgen]
-  pub fn set_wave_type(&mut self, wave: &str) {
-    self.pr_wave_type = match wave {
+  pub fn set_osc1_wave_type(&mut self, wave: &str) {
+    self.osc1_wave_type = match wave {
       // "cst" => 0,
       "sin" => 1,
       "tri" => 2,
@@ -132,12 +137,34 @@ impl FmOsc {
       _ => 255,
     };
 
-    match self.pr_wave_type {
-      // 0 => self.primary.set_periodic_wave(&customwave);,
-      1 => self.primary.set_type(OscillatorType::Sine),
-      2 => self.primary.set_type(OscillatorType::Triangle),
-      3 => self.primary.set_type(OscillatorType::Square),
-      4 => self.primary.set_type(OscillatorType::Sawtooth),
+    match self.osc1_wave_type {
+      // 0 => self.osc1.set_periodic_wave(&customwave);,
+      1 => self.osc1.set_type(OscillatorType::Sine),
+      2 => self.osc1.set_type(OscillatorType::Triangle),
+      3 => self.osc1.set_type(OscillatorType::Square),
+      4 => self.osc1.set_type(OscillatorType::Sawtooth),
+      _ => ()
+    };
+
+  }
+
+  #[wasm_bindgen]
+  pub fn set_osc2_wave_type(&mut self, wave: &str) {
+    self.osc2_wave_type = match wave {
+      // "cst" => 0,
+      "sin" => 1,
+      "tri" => 2,
+      "sqr" => 3,
+      "saw" => 4,
+      _ => 255,
+    };
+
+    match self.osc2_wave_type {
+      // 0 => self.osc1.set_periodic_wave(&customwave);,
+      1 => self.osc2.set_type(OscillatorType::Sine),
+      2 => self.osc2.set_type(OscillatorType::Triangle),
+      3 => self.osc2.set_type(OscillatorType::Square),
+      4 => self.osc2.set_type(OscillatorType::Sawtooth),
       _ => ()
     };
 
@@ -152,42 +179,42 @@ impl FmOsc {
     if gain < 0.0 {
       gain = 0.0;
     }
-    self.gain.gain().set_value(gain);
+    self.osc1_gain.gain().set_value(gain);
   }
 
   #[wasm_bindgen]
-  pub fn set_primary_frequency(&self, freq: f32) {
-    self.primary.frequency().set_value(freq);
+  pub fn set_osc1_frequency(&self, freq: f32) {
+    self.osc1.frequency().set_value(freq);
 
     // The frequency of the FM oscillator depends on the frequency of the
-    // primary oscillator, so we update the frequency of both in this method.
-    self.fm_osc.frequency().set_value(self.fm_freq_ratio * freq);
-    self.fm_gain.gain().set_value(self.fm_gain_ratio * freq);
+    // osc1 oscillator, so we update the frequency of both in this method.
+    self.osc2.frequency().set_value(self.fmfreq_1_to_2 * freq);
+    self.osc2_gain.gain().set_value(self.osc2_gain_value * freq);
   }
 
   #[wasm_bindgen]
   pub fn set_note(&self, note: u8) {
     let freq = midi_to_freq(note);
-    self.set_primary_frequency(freq);
+    self.set_osc1_frequency(freq);
   }
 
   /// This should be between 0 and 1, though higher values are accepted.
   #[wasm_bindgen]
   pub fn set_fm_amount(&mut self, amt: f32) {
-    self.fm_gain_ratio = amt;
+    self.osc2_gain_value = amt;
 
-    self.fm_gain
+    self.osc2_gain
         .gain()
-        .set_value(self.fm_gain_ratio * self.primary.frequency().value());
+        .set_value(self.osc2_gain_value * self.osc1.frequency().value());
   }
 
   /// This should be between 0 and 1, though higher values are accepted.
   #[wasm_bindgen]
   pub fn set_fm_frequency(&mut self, amt: f32) {
-    self.fm_freq_ratio = amt;
-    self.fm_osc
+    self.fmfreq_1_to_2 = amt;
+    self.osc2
         .frequency()
-        .set_value(self.fm_freq_ratio * self.primary.frequency().value());
+        .set_value(self.fmfreq_1_to_2 * self.osc1.frequency().value());
   }
 
   #[wasm_bindgen]
