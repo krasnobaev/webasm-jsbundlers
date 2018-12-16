@@ -39,7 +39,13 @@ import('./pkg')
       fm.set_note(inote);
       fm.set_fm_frequency(0);
       fm.set_fm_amount(0);
-      fm.set_gain(0.8);
+      fm.set_osc1_gain(0.8);
+      fm.set_ms_gain(0.8);
+
+      $('#fm_freq').val(0).trigger('change');
+      $('#fm_amount').val(0).trigger('change');
+      $('#osc1_gain').val(0.8).trigger('change');
+      $('#ms_gain').val(0.8).trigger('change');
 
       let canvasCtx = document.getElementById('spectrum').getContext('2d');
       canvasCtx.clearRect(0, 0, WIDTH, HEIGHT);
@@ -52,20 +58,6 @@ import('./pkg')
       clearInterval(intervalid);
       intervalid = null;
       fm = null;
-    }
-  });
-
-  const play_button2 = document.getElementById('play2');
-  play_button2.addEventListener('click', event => {
-    if (fm2 === null) {
-      fm2 = new module.FmOsc();
-      fm2.set_note(inote + 24);
-      fm2.set_fm_frequency(0);
-      fm2.set_fm_amount(0);
-      fm2.set_gain(0.8);
-    } else {
-      fm2.free();
-      fm2 = null;
     }
   });
 
@@ -212,6 +204,45 @@ import('./pkg')
       }
     },
   });
+
+  $('#osc1_gain').knob({
+    label: 'OSC1 Gain',
+    value: 0.8,
+    min: 0,
+    max: 1,
+    step: 0.05,
+    angleOffset: -125,
+    angleArc: 250,
+    width: 100,
+    height: 100,
+    'change' : value => {
+      if (fm) {
+        fm.set_osc1_gain(Number(value));
+      }
+    },
+  });
+
+  $('#ms_gain').knob({
+    label: 'Master Gain',
+    value: 0.8,
+    min: 0,
+    max: 1,
+    step: 0.05,
+    angleOffset: -125,
+    angleArc: 250,
+    width: 100,
+    height: 100,
+    'change' : value => {
+      if (fm) {
+        fm.set_ms_gain(Number(value));
+      }
+    },
+  });
+
+  $('#fm_freq').val(0).trigger('change');
+  $('#fm_amount').val(0).trigger('change');
+  $('#osc1_gain').val(0.8).trigger('change');
+  $('#ms_gain').val(0.8).trigger('change');
 
   $('#pr_wave').change(function () {
     fm.set_wave_type(this.value);

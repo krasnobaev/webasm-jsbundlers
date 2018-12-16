@@ -47,12 +47,14 @@ pub struct FmOsc {
   ctx: AudioContext,
   primary: web_sys::OscillatorNode, /// The primary oscillator.  This will be the fundamental frequency
   gain: web_sys::GainNode,          /// Overall gain (volume) control
-  analyser: web_sys::AnalyserNode,
   pr_wave_type: u8,
   fm_gain: web_sys::GainNode,       /// Amount of frequency modulation
   fm_osc: web_sys::OscillatorNode,  /// The oscillator that will modulate the primary oscillator's frequency
   fm_freq_ratio: f32,               /// The ratio between the primary frequency and the fm_osc frequency.
   fm_gain_ratio: f32,
+
+  analyser: web_sys::AnalyserNode,
+  ms_gain: web_sys::GainNode,   // Overall gain (volume) control
 }
 
 impl Drop for FmOsc {
@@ -70,9 +72,11 @@ impl FmOsc {
     // Create our web audio objects.
     let primary = ctx.create_oscillator()?;
     let fm_osc = ctx.create_oscillator()?;
-    let gain = ctx.create_gain()?;
     let fm_gain = ctx.create_gain()?;
+    let gain = ctx.create_gain()?;
+
     let analyser = ctx.create_analyser()?;
+    let ms_gain = ctx.create_gain()?;
 
     // let pdata: Vec<Vec<f32>> = getdft(data)?;
     // let mut real: Vec<f32> = pdata[0][..].to_vec();
@@ -87,13 +91,16 @@ impl FmOsc {
     fm_osc.set_type(OscillatorType::Sine);
     fm_osc.frequency().set_value(0.0);
     analyser.set_fft_size(2048);
+    ms_gain.gain().set_value(0.0); // starts muted
 
     // Connect the nodes up!
     primary.connect_with_audio_node(&gain)?;
-    gain.connect_with_audio_node(&ctx.destination())?;
-    gain.connect_with_audio_node(&analyser)?;
     fm_osc.connect_with_audio_node(&fm_gain)?;
     fm_gain.connect_with_audio_param(&primary.frequency())?;
+    gain.connect_with_audio_node(&ms_gain)?;
+    gain.connect_with_audio_node(&analyser)?;
+
+    ms_gain.connect_with_audio_node(&ctx.destination())?;
 
     primary.start()?;
     fm_osc.start()?;
@@ -102,12 +109,14 @@ impl FmOsc {
         ctx,
         primary,
         gain,
-        analyser,
         pr_wave_type: 1,
         fm_gain,
         fm_osc,
         fm_freq_ratio: 0.0,
         fm_gain_ratio: 0.0,
+
+        analyser,
+        ms_gain,
     })
   }
 
@@ -136,7 +145,7 @@ impl FmOsc {
 
   /// Sets the gain for this oscillator, between 0.0 and 1.0.
   #[wasm_bindgen]
-  pub fn set_gain(&self, mut gain: f32) {
+  pub fn set_osc1_gain(&self, mut gain: f32) {
     if gain > 1.0 {
       gain = 1.0;
     }
@@ -179,6 +188,17 @@ impl FmOsc {
     self.fm_osc
         .frequency()
         .set_value(self.fm_freq_ratio * self.primary.frequency().value());
+  }
+
+  #[wasm_bindgen]
+  pub fn set_ms_gain(&mut self, mut gain: f32) {
+    if gain > 1.0 {
+      gain = 1.0;
+    }
+    if gain < 0.0 {
+      gain = 0.0;
+    }
+    self.ms_gain.gain().set_value(gain);
   }
 
   /*
