@@ -1,4 +1,29 @@
-.controls, .master
-  border: 1px solid black
+.controls
+  .transport
+    grid-template-columns: auto 300px
+    margin-bottom: 1rem
+  .synth
+    grid-template-columns: auto 300px 150px
+    padding: 0.5rem
+  .cs_title
+    position: absolute
+    font-family: monospace
+    color: #999
+    opacity: 0.5
+  .transport, .synth
+    display: grid
+    .cs_section
+      border: 1px solid black
+    .osc2
+      grid-row-start: 2
+    .fm_matrix
+      grid-column-start: 2
+      grid-row-end: span 2
+
+      display: grid
+      grid-template-rows: 150px 150px
+      grid-template-columns: 150px 150px
+    .cs_master
+      grid-row-end: span 2
 .knob
   font-size: 0.6rem !important
