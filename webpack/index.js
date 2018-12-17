@@ -37,22 +37,33 @@ import('./pkg')
 
       fm = new module.FmOsc(sharkFinValues);
       fm.set_note(inote);
-      fm.set_fm_frequency(0);
-      fm.set_fm_amount(0);
-      fm.set_osc1_gain(0.8);
-      fm.set_ms_gain(0.8);
 
-      $('#fm_freq').val(0).trigger('change');
-      $('#fm_amount').val(0).trigger('change');
+      fm.set_osc1_gain(0.8);
+      fm.set_osc1_bypass(0.8);
+      fm.set_osc2_gain(0.0);
+      fm.set_osc2_bypass(0.0);
+
       $('#osc1_gain').val(0.8).trigger('change');
+      $('#osc2_gain').val(0).trigger('change');
+      $('#osc1_bypass').val(0).trigger('change');
+      $('#osc2_bypass').val(0).trigger('change');
+
+      $('#fm_osc1_osc1').val(0).trigger('change');
+      $('#fm_osc2_osc1').val(0).trigger('change');
+      $('#fm_osc1_osc2').val(0).trigger('change');
+      $('#fm_osc2_osc2').val(0).trigger('change');
+
+      fm.set_ms_gain(0.8);
       $('#ms_gain').val(0.8).trigger('change');
+
+      noteOn(69);
 
       let canvasCtx = document.getElementById('spectrum').getContext('2d');
       canvasCtx.clearRect(0, 0, WIDTH, HEIGHT);
 
       intervalid = setInterval(() => {
         draw(canvasCtx, fm.get_buffer_length(), fm.get_analyser_data());
-      }, 1);
+      }, 20);
     } else {
       fm.free();
       clearInterval(intervalid);
@@ -138,6 +149,12 @@ import('./pkg')
         delta += 12;
         break;
 
+      case 'p':
+        window.octave_shift += 1;
+        break;
+      case 'o':
+        window.octave_shift -= 1;
+        break;
       default:
         return;
     }
@@ -149,82 +166,42 @@ import('./pkg')
     inote = base + delta;
 
     if (fm !== null) {
-      fm.set_note(inote);
+      fm.set_note(inote + (window.octave_shift*12));
     }
 
     console.log(inote);
   });
 
-  $('#fm_freq').knob({
-    label: 'Modulation frequency',
-    value: 0,
-    min: 0,
-    max: 3,
-    step: 0.05,
-    angleOffset: -125,
-    angleArc: 250,
-    width: 100,
-    height: 100,
-    'change' : value => {
-      if (fm) {
-        fm.set_fm_frequency(Number(value));
-      }
-    },
-  });
-
-  $('#fm_amount').knob({
-    label: 'Modulation amount',
-    value: 0,
-    min: 0,
-    max: 3,
-    step: 0.05,
-    angleOffset: -125,
-    angleArc: 250,
-    width: 100,
-    height: 100,
-    'change' : value => {
-      if (fm) {
-        fm.set_fm_amount(Number(value));
-      }
-    },
-  });
-
-  $('#osc1_gain').knob({
-    label: 'OSC1 Gain',
-    value: 0.8,
-    min: 0,
-    max: 1,
-    step: 0.05,
-    angleOffset: -125,
-    angleArc: 250,
-    width: 100,
-    height: 100,
-    'change' : value => {
-      if (fm) {
-        fm.set_osc1_gain(Number(value));
-      }
-    },
-  });
-
-  $('#ms_gain').knob({
-    label: 'Master Gain',
-    value: 0.8,
-    min: 0,
-    max: 1,
-    step: 0.05,
-    angleOffset: -125,
-    angleArc: 250,
-    width: 100,
-    height: 100,
-    'change' : value => {
-      if (fm) {
-        fm.set_ms_gain(Number(value));
-      }
-    },
+  [
+    ['#fm_osc1_osc1', 'set_fm1to1',      0.0, 2, 0.001],
+    ['#fm_osc1_osc2', 'set_fm1to2',      0.0, 2, 0.001],
+    ['#fm_osc2_osc1', 'set_fm2to1',      0.0, 2, 0.001],
+    ['#fm_osc2_osc2', 'set_fm2to2',      0.0, 2, 0.001],
+    ['#osc1_gain',    'set_osc1_gain',   0.8, 1, 0.05 ],
+    ['#osc1_bypass',  'set_osc1_bypass', 0.8, 1, 0.05 ],
+    ['#osc2_gain',    'set_osc2_gain',   0.8, 1, 0.05 ],
+    ['#osc2_bypass',  'set_osc2_bypass', 0.8, 1, 0.05 ],
+    ['#ms_gain',      'set_ms_gain',     0.8, 1, 0.05 ],
+  ].forEach((el) => {
+    $(el[0]).knob({
+      value: el[2],
+      min: 0,
+      max: el[3],
+      step: el[4],
+      angleOffset: -125,
+      angleArc: 250,
+      width: 100,
+      height: 100,
+      'change' : value => {
+        if (fm) {
+          fm[el[1]](Number(value));
+        }
+      },
+    });
   });
 
   $('#fm_freq').val(0).trigger('change');
-  $('#fm_amount').val(0).trigger('change');
+  $('#osc2_gain').val(0).trigger('change');
   $('#osc1_gain').val(0.8).trigger('change');
   $('#ms_gain').val(0.8).trigger('change');
 
@@ -358,13 +335,14 @@ function square(x, len) {
   }
 
   function noteOn(noteNumber) {
-    fm.set_note(noteNumber);
+    fm.set_note(noteNumber + (window.octave_shift*12));
     // activeNotes.push( noteNumber );
     // oscillator.frequency.cancelScheduledValues(0);
     // oscillator.frequency.setTargetAtTime( frequencyFromNoteNumber(noteNumber), 0, portamento );
     // envelope.gain.cancelScheduledValues(0);
     // envelope.gain.setTargetAtTime(1.0, 0, attack);
   }
+  window.noteOn = noteOn;
 
   function noteOff(noteNumber) {
     var position = activeNotes.indexOf(noteNumber);
@@ -384,6 +362,7 @@ function square(x, len) {
 /**
  * helpers
  */
+window.octave_shift = 0;
 function frequencyFromNoteNumber( note ) {
-  return 440 * Math.pow(2,(note-69) / 12);
+  return 440 * Math.pow(2,(note-69 + (window.octave_shift*12)) / 12);
 }

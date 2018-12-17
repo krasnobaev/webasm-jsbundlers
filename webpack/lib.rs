@@ -4,7 +4,12 @@ extern crate rustfft;
 extern crate serde_derive;
 
 use wasm_bindgen::prelude::*;
-use web_sys::{AudioContext, OscillatorType, PeriodicWave};
+use web_sys::{
+  console,
+  AudioContext,
+  OscillatorType,
+  // PeriodicWave,
+};
 
 use rustfft::algorithm::DFT;
 use rustfft::FFT;
@@ -45,16 +50,33 @@ pub fn midi_to_freq(note: u8) -> f32 {
 #[wasm_bindgen]
 pub struct FmOsc {
   ctx: AudioContext,
+  base_freq: f32,
+
   osc1: web_sys::OscillatorNode,  // this will be the fundamental frequency
   osc1_wave_type: u8,
   osc1_gain: web_sys::GainNode,
+  osc1_gain_value: f32,
+  osc1_bypass: web_sys::GainNode,
+  osc1_bypass_value: f32,
 
   osc2: web_sys::OscillatorNode,  // this will modulate the osc1 oscillator's frequency
   osc2_wave_type: u8,
-  osc2_gain: web_sys::GainNode,   // Amount of frequency modulation
+  osc2_gain: web_sys::GainNode,
   osc2_gain_value: f32,
+  osc2_bypass: web_sys::GainNode,
+  osc2_bypass_value: f32,
 
-  fmfreq_1_to_2: f32,             // The ratio between the osc1 frequency and the osc2 frequency.
+  // fm matrix
+  osc1t1gain: web_sys::GainNode,
+  osc2t1gain: web_sys::GainNode,
+  osc1t2gain: web_sys::GainNode,
+  osc2t2gain: web_sys::GainNode,
+
+  // fm ratio between osc's
+  fmfreq_1t2: f32,
+  fmfreq_1t1: f32,
+  fmfreq_2t1: f32,
+  fmfreq_2t2: f32,
 
   analyser: web_sys::AnalyserNode,
   ms_gain: web_sys::GainNode,     // Overall gain (volume) control
@@ -77,6 +99,14 @@ impl FmOsc {
     let osc2 = ctx.create_oscillator()?;
     let osc1_gain = ctx.create_gain()?;
     let osc2_gain = ctx.create_gain()?;
+    let osc1_bypass = ctx.create_gain()?;
+    let osc2_bypass = ctx.create_gain()?;
+
+    // fm matrix
+    let osc1t1gain = ctx.create_gain()?;
+    let osc2t1gain = ctx.create_gain()?;
+    let osc1t2gain = ctx.create_gain()?;
+    let osc2t2gain = ctx.create_gain()?;
 
     let analyser = ctx.create_analyser()?;
     let ms_gain = ctx.create_gain()?;
@@ -88,21 +118,45 @@ impl FmOsc {
 
     // Some initial settings:
     osc1.set_type(OscillatorType::Sine);
-    osc1.frequency().set_value(440.0); // A4 note
-    osc1_gain.gain().set_value(0.0);    // starts muted
-    osc2_gain.gain().set_value(0.0); // no initial frequency modulation
+    osc1.frequency().set_value(0.0);
+    osc1_gain.gain().set_value(0.0);
+    osc1_bypass.gain().set_value(0.0);
+
     osc2.set_type(OscillatorType::Sine);
     osc2.frequency().set_value(0.0);
+    osc2_gain.gain().set_value(0.0);
+    osc2_bypass.gain().set_value(0.0);
+
+    // fm matrix
+    osc1t1gain.gain().set_value(0.0);
+    osc2t1gain.gain().set_value(0.0);
+    osc1t2gain.gain().set_value(0.0);
+    osc2t2gain.gain().set_value(0.0);
+
     analyser.set_fft_size(2048);
     ms_gain.gain().set_value(0.0); // starts muted
 
-    // Connect the nodes up!
+    // OSC -> gain
     osc1.connect_with_audio_node(&osc1_gain)?;
     osc2.connect_with_audio_node(&osc2_gain)?;
-    osc2_gain.connect_with_audio_param(&osc1.frequency())?;
-    osc1_gain.connect_with_audio_node(&ms_gain)?;
-    osc1_gain.connect_with_audio_node(&analyser)?;
+    osc1.connect_with_audio_node(&osc1_bypass)?;
+    osc2.connect_with_audio_node(&osc2_bypass)?;
 
+    // fm matrix
+    osc1_gain.connect_with_audio_node(&osc1t1gain)?;
+    osc1_gain.connect_with_audio_node(&osc1t2gain)?;
+    osc2_gain.connect_with_audio_node(&osc2t1gain)?;
+    osc2_gain.connect_with_audio_node(&osc2t2gain)?;
+    osc1t1gain.connect_with_audio_param(&osc1.frequency())?;
+    osc2t1gain.connect_with_audio_param(&osc1.frequency())?;
+    osc1t2gain.connect_with_audio_param(&osc2.frequency())?;
+    osc2t2gain.connect_with_audio_param(&osc2.frequency())?;
+
+    // mix to main bus
+    osc1_bypass.connect_with_audio_node(&ms_gain)?;
+    osc2_bypass.connect_with_audio_node(&ms_gain)?;
+
+    ms_gain.connect_with_audio_node(&analyser)?;
     ms_gain.connect_with_audio_node(&ctx.destination())?;
 
     osc1.start()?;
@@ -110,16 +164,31 @@ impl FmOsc {
 
     Ok(FmOsc {
         ctx,
+        base_freq: 0.0,
+
         osc1,
         osc1_wave_type: 1,
         osc1_gain,
+        osc1_gain_value: 0.0,
+        osc1_bypass,
+        osc1_bypass_value: 0.0,
 
         osc2,
         osc2_wave_type: 1,
         osc2_gain,
         osc2_gain_value: 0.0,
+        osc2_bypass,
+        osc2_bypass_value: 0.0,
 
-        fmfreq_1_to_2: 0.0,
+        osc1t1gain,
+        osc2t1gain,
+        osc1t2gain,
+        osc2t2gain,
+
+        fmfreq_1t2: 0.0,
+        fmfreq_1t1: 0.0,
+        fmfreq_2t1: 0.0,
+        fmfreq_2t2: 0.0,
 
         analyser,
         ms_gain,
@@ -172,49 +241,124 @@ impl FmOsc {
 
   /// Sets the gain for this oscillator, between 0.0 and 1.0.
   #[wasm_bindgen]
-  pub fn set_osc1_gain(&self, mut gain: f32) {
+  pub fn set_osc1_gain(&mut self, mut gain: f32) {
     if gain > 1.0 {
       gain = 1.0;
     }
     if gain < 0.0 {
       gain = 0.0;
     }
-    self.osc1_gain.gain().set_value(gain);
+
+    self.osc1_gain_value = gain;
+    self.osc1_gain.gain().set_value(self.osc1_gain_value);
   }
 
   #[wasm_bindgen]
-  pub fn set_osc1_frequency(&self, freq: f32) {
+  pub fn set_osc2_gain(&mut self, mut gain: f32) {
+    if gain > 1.0 {
+      gain = 1.0;
+    }
+    if gain < 0.0 {
+      gain = 0.0;
+    }
+
+    self.osc2_gain_value = gain;
+    self.osc2_gain.gain().set_value(self.osc1_gain_value);
+  }
+
+  #[wasm_bindgen]
+  pub fn set_osc1_bypass(&mut self, mut gain: f32) {
+    if gain > 1.0 {
+      gain = 1.0;
+    }
+    if gain < 0.0 {
+      gain = 0.0;
+    }
+
+    self.osc1_bypass_value = gain;
+    self.osc1_bypass.gain().set_value(self.osc1_bypass_value);
+  }
+
+  #[wasm_bindgen]
+  pub fn set_osc2_bypass(&mut self, mut gain: f32) {
+    if gain > 1.0 {
+      gain = 1.0;
+    }
+    if gain < 0.0 {
+      gain = 0.0;
+    }
+
+    self.osc2_bypass_value = gain;
+    self.osc2_bypass.gain().set_value(self.osc2_bypass_value);
+  }
+
+  #[wasm_bindgen]
+  pub fn adjust_fm_matrix(&self) {
+    let freq: f32 = self.base_freq;
+
+    self.osc1t1gain.gain().set_value(self.fmfreq_1t1 * freq);
+    self.osc1t2gain.gain().set_value(self.fmfreq_1t2 * freq);
+    self.osc2t1gain.gain().set_value(self.fmfreq_2t1 * freq);
+    self.osc2t2gain.gain().set_value(self.fmfreq_2t2 * freq);
+
+    // self.osc1.frequency().set_value(
+    //   self.fmfreq_1t1 * freq + self.fmfreq_2t1 * freq + freq
+    // );
+    // self.osc2.frequency().set_value(
+    //   self.fmfreq_1t2 * freq + self.fmfreq_2t2 * freq + freq
+    // );
+
+    let fm1: JsValue = (self.fmfreq_1t1 * freq).into();
+    let fm2: JsValue = (self.fmfreq_1t2 * freq).into();
+    let fm3: JsValue = (self.fmfreq_2t1 * freq).into();
+    let fm4: JsValue = (self.fmfreq_2t2 * freq).into();
+    console::log_2(&"osc1t1gain".into(), &fm1);
+    console::log_2(&"osc1t2gain".into(), &fm2);
+    console::log_2(&"osc2t1gain".into(), &fm3);
+    console::log_2(&"osc2t2gain".into(), &fm4);
+  }
+
+  #[wasm_bindgen]
+  pub fn set_osc_frequency(&self, freq: f32) {
     self.osc1.frequency().set_value(freq);
+    self.osc2.frequency().set_value(freq);
 
-    // The frequency of the FM oscillator depends on the frequency of the
-    // osc1 oscillator, so we update the frequency of both in this method.
-    self.osc2.frequency().set_value(self.fmfreq_1_to_2 * freq);
-    self.osc2_gain.gain().set_value(self.osc2_gain_value * freq);
+    self.adjust_fm_matrix();
   }
 
   #[wasm_bindgen]
-  pub fn set_note(&self, note: u8) {
+  pub fn set_note(&mut self, note: u8) {
     let freq = midi_to_freq(note);
-    self.set_osc1_frequency(freq);
+    self.base_freq = freq;
+    self.set_osc_frequency(self.base_freq);
   }
 
-  /// This should be between 0 and 1, though higher values are accepted.
   #[wasm_bindgen]
-  pub fn set_fm_amount(&mut self, amt: f32) {
-    self.osc2_gain_value = amt;
-
-    self.osc2_gain
-        .gain()
-        .set_value(self.osc2_gain_value * self.osc1.frequency().value());
+  pub fn set_fm1to1(&mut self, amt: f32) {
+    self.fmfreq_1t1 = amt;
+    self.osc1t1gain.gain().set_value(self.fmfreq_1t1);
+    self.adjust_fm_matrix();
   }
 
-  /// This should be between 0 and 1, though higher values are accepted.
   #[wasm_bindgen]
-  pub fn set_fm_frequency(&mut self, amt: f32) {
-    self.fmfreq_1_to_2 = amt;
-    self.osc2
-        .frequency()
-        .set_value(self.fmfreq_1_to_2 * self.osc1.frequency().value());
+  pub fn set_fm1to2(&mut self, amt: f32) {
+    self.fmfreq_1t2 = amt;
+    self.osc1t2gain.gain().set_value(self.fmfreq_1t2);
+    self.adjust_fm_matrix();
+  }
+
+  #[wasm_bindgen]
+  pub fn set_fm2to1(&mut self, amt: f32) {
+    self.fmfreq_2t1 = amt;
+    self.osc1t1gain.gain().set_value(self.fmfreq_2t1);
+    self.adjust_fm_matrix();
+  }
+
+  #[wasm_bindgen]
+  pub fn set_fm2to2(&mut self, amt: f32) {
+    self.fmfreq_2t2 = amt;
+    self.osc2t1gain.gain().set_value(self.fmfreq_2t2);
+    self.adjust_fm_matrix();
   }
 
   #[wasm_bindgen]
