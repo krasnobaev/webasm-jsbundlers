@@ -258,7 +258,7 @@ function square(x, len) {
     if (navigator.requestMIDIAccess) {
       navigator.requestMIDIAccess().then( onMIDIInit, onMIDIReject );
     } else {
-      alert("No MIDI support present in your browser. You're gonna have a bad time.")
+      document.getElementById('midisupport').innerText = 'not supported by browser';
     }
 
     // set up the basic oscillator chain, muted to begin with.
@@ -280,8 +280,9 @@ function square(x, len) {
       input.value.onmidimessage = MIDIMessageEventHandler;
       haveAtLeastOneDevice = true;
     }
-    if (!haveAtLeastOneDevice)
-      alert("No MIDI input devices present.  You're gonna have a bad time.");
+
+    document.getElementById('midisupport').innerText = haveAtLeastOneDevice ?
+      'available' : 'not found';
   }
 
   function onMIDIReject(err) {
