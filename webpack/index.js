@@ -58,12 +58,10 @@ import('./pkg')
 
       noteOn(69);
 
-      let canvasCtx = document.getElementById('spectrum').getContext('2d');
-      canvasCtx.clearRect(0, 0, WIDTH, HEIGHT);
-
       intervalid = setInterval(() => {
-        draw(canvasCtx, fm.get_buffer_length(), fm.get_analyser_data());
+        fm.draw_wave();
       }, 20);
+
     } else {
       fm.free();
       clearInterval(intervalid);

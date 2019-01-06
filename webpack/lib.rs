@@ -3,6 +3,9 @@ extern crate web_sys;
 extern crate rustfft;
 extern crate serde_derive;
 
+use std::f64;
+use wasm_bindgen::JsCast;
+
 use wasm_bindgen::prelude::*;
 use web_sys::{
   console,
@@ -195,6 +198,60 @@ impl FmOsc {
     })
   }
 
+  /*
+   * draw spectrum on canvas
+   * see https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API/Visualizations_with_Web_Audio_API
+   */
+  pub fn draw_wave(&mut self) {
+    let document = web_sys::window().unwrap().document().unwrap();
+    let canvas = document.get_element_by_id("spectrum").unwrap();
+    let canvas: web_sys::HtmlCanvasElement = canvas
+        .dyn_into::<web_sys::HtmlCanvasElement>()
+        .map_err(|_| ())
+        .unwrap();
+    let canvas_ctx = canvas
+        .get_context("2d")
+        .unwrap()
+        .unwrap()
+        .dyn_into::<web_sys::CanvasRenderingContext2d>()
+        .unwrap();
+
+    let buffer_length: usize = self.get_buffer_length() as usize;
+    let data: Vec<u8> = self.get_analyser_data();
+
+    const WIDTH: f64 = 600.0f64;
+    const HEIGHT: f64 = 800.0f64;
+    let fill_style: JsValue = "rgb(200, 200, 200)".into();
+    let stroke_style: JsValue = "rgb(0, 0, 0)".into();
+
+    // var drawVisual = requestAnimationFrame(draw);
+    canvas_ctx.set_fill_style(&fill_style);
+    canvas_ctx.fill_rect(0.0f64, 0.0f64, WIDTH, HEIGHT);
+    canvas_ctx.set_line_width(2.0f64);
+    canvas_ctx.set_stroke_style(&stroke_style);
+    canvas_ctx.begin_path(); // OK
+
+    let slice_width = WIDTH * 1.0f64 / (buffer_length as f64);
+    let mut x: f64 = 0.0f64;
+
+    for i in 0..buffer_length {
+
+      let v = (data[i] as f64) / 128.0f64;
+      let y = v * HEIGHT / 2.0f64;
+
+      if i == 0 {
+        canvas_ctx.move_to(x, y);
+      } else {
+        canvas_ctx.line_to(x, y);
+      }
+
+      x += slice_width;
+    }
+
+    canvas_ctx.line_to(WIDTH, HEIGHT / 2.0f64);
+    canvas_ctx.stroke();
+  }
+
   #[wasm_bindgen]
   pub fn set_osc1_wave_type(&mut self, wave: &str) {
     self.osc1_wave_type = match wave {
@@ -379,20 +436,27 @@ impl FmOsc {
    */
 
   #[wasm_bindgen]
-  pub fn get_buffer_length(&mut self) -> Result<u32, JsValue> {
+  // pub fn get_buffer_length(&mut self) -> Result<u32, JsValue> {
+  pub fn get_buffer_length(&mut self) -> u32 {
     let buffer_length = self.analyser.frequency_bin_count();
-    Ok(buffer_length)
+    // Ok(buffer_length)
+    buffer_length
   }
 
   /// This should be between 0 and 1, though higher values are accepted.
   #[wasm_bindgen]
-  pub fn get_analyser_data(&mut self) -> Result<JsValue, JsValue> {
+  // pub fn get_analyser_data(&mut self) -> Result<JsValue, JsValue> {
+  pub fn get_analyser_data(&mut self) -> Vec<u8> {
     let buffer_length = self.analyser.frequency_bin_count();
     // let res = Uint8Array::new(&buffer_length);
     let mut data_array = vec![0u8; buffer_length as usize];
     self.analyser.get_byte_time_domain_data(&mut data_array[..]);
 
     // Ok(Uint8Array::new(&data_array[..]))
-    Ok(JsValue::from_serde(&data_array).unwrap())
+    // Ok(JsValue::from_serde(&data_array).unwrap())
+    data_array
+  }
+}
+
   }
 }
