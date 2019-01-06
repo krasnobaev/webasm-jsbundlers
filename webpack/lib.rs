@@ -246,7 +246,6 @@ impl FmOsc {
       x += slice_width;
     }
 
-    canvas_ctx.line_to(width, height / 2.0f64);
     canvas_ctx.stroke();
   }
 
