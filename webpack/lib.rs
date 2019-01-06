@@ -202,7 +202,7 @@ impl FmOsc {
    */
   pub fn draw_wave(&mut self) {
     let document = web_sys::window().unwrap().document().unwrap();
-    let canvas = document.get_element_by_id("spectrum").unwrap();
+    let canvas = document.get_element_by_id("waveform").unwrap();
     let canvas: web_sys::HtmlCanvasElement = canvas
         .dyn_into::<web_sys::HtmlCanvasElement>()
         .map_err(|_| ())
@@ -215,27 +215,27 @@ impl FmOsc {
         .unwrap();
 
     let buffer_length: usize = self.get_buffer_length() as usize;
-    let data: Vec<u8> = self.get_analyser_data();
+    let data: Vec<u8> = self.get_analyser_data_time_domain();
 
-    const WIDTH: f64 = 600.0f64;
-    const HEIGHT: f64 = 800.0f64;
+    let width: f64 = canvas.width().into();
+    let height: f64 = canvas.height().into();
     let fill_style: JsValue = "rgb(200, 200, 200)".into();
     let stroke_style: JsValue = "rgb(0, 0, 0)".into();
 
     // var drawVisual = requestAnimationFrame(draw);
     canvas_ctx.set_fill_style(&fill_style);
-    canvas_ctx.fill_rect(0.0f64, 0.0f64, WIDTH, HEIGHT);
+    canvas_ctx.fill_rect(0.0f64, 0.0f64, width, height);
     canvas_ctx.set_line_width(2.0f64);
     canvas_ctx.set_stroke_style(&stroke_style);
     canvas_ctx.begin_path(); // OK
 
-    let slice_width = WIDTH * 1.0f64 / (buffer_length as f64);
+    let slice_width = width * 1.0f64 / (buffer_length as f64);
     let mut x: f64 = 0.0f64;
 
     for i in 0..buffer_length {
 
       let v = (data[i] as f64) / 128.0f64;
-      let y = v * HEIGHT / 2.0f64;
+      let y = v * height / 2.0f64;
 
       if i == 0 {
         canvas_ctx.move_to(x, y);
@@ -246,7 +246,7 @@ impl FmOsc {
       x += slice_width;
     }
 
-    canvas_ctx.line_to(WIDTH, HEIGHT / 2.0f64);
+    canvas_ctx.line_to(width, height / 2.0f64);
     canvas_ctx.stroke();
   }
 
@@ -489,8 +489,8 @@ impl FmOsc {
 
   /// This should be between 0 and 1, though higher values are accepted.
   #[wasm_bindgen]
-  // pub fn get_analyser_data(&mut self) -> Result<JsValue, JsValue> {
-  pub fn get_analyser_data(&mut self) -> Vec<u8> {
+  // pub fn get_analyser_data_time_domain(&mut self) -> Result<JsValue, JsValue> {
+  pub fn get_analyser_data_time_domain(&mut self) -> Vec<u8> {
     let buffer_length = self.analyser.frequency_bin_count();
     // let res = Uint8Array::new(&buffer_length);
     let mut data_array = vec![0u8; buffer_length as usize];
@@ -500,7 +500,13 @@ impl FmOsc {
     // Ok(JsValue::from_serde(&data_array).unwrap())
     data_array
   }
-}
 
+  #[wasm_bindgen]
+  pub fn get_analyser_data_frequency(&mut self) -> Vec<u8> {
+    let buffer_length = self.analyser.frequency_bin_count();
+    let mut data_array = vec![0u8; buffer_length as usize];
+    self.analyser.get_byte_frequency_data(&mut data_array[..]);
+
+    data_array
   }
 }
