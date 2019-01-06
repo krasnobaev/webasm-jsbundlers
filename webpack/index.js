@@ -154,6 +154,12 @@ import('./pkg')
       case 'o':
         window.octave_shift -= 1;
         break;
+      case ']':
+        window.note_shift += 1;
+        break;
+      case '[':
+        window.note_shift -= 1;
+        break;
       default:
         return;
     }
@@ -165,7 +171,7 @@ import('./pkg')
     inote = base + delta;
 
     if (fm !== null) {
-      fm.set_note(inote + (window.octave_shift*12));
+      fm.set_note(inote + (window.octave_shift*12) + window.note_shift);
     }
 
     console.log(inote);
@@ -302,7 +308,7 @@ function square(x, len) {
   }
 
   function noteOn(noteNumber) {
-    fm.set_note(noteNumber + (window.octave_shift*12));
+    fm.set_note(noteNumber + (window.octave_shift*12) + window.note_shift);
     // activeNotes.push( noteNumber );
     // oscillator.frequency.cancelScheduledValues(0);
     // oscillator.frequency.setTargetAtTime( frequencyFromNoteNumber(noteNumber), 0, portamento );
@@ -330,6 +336,7 @@ function square(x, len) {
  * helpers
  */
 window.octave_shift = 0;
+window.note_shift = 0;
 function frequencyFromNoteNumber( note ) {
-  return 440 * Math.pow(2,(note-69 + (window.octave_shift*12)) / 12);
+  return 440 * Math.pow(2,(note-69 + (window.octave_shift*12) + window.note_shift) / 12);
 }
