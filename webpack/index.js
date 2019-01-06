@@ -59,7 +59,7 @@ import('./pkg')
       noteOn(69);
 
       intervalid = setInterval(() => {
-        fm.draw_wave();
+        fm.draw_bars();
       }, 20);
 
     } else {

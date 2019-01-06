@@ -3,9 +3,7 @@ extern crate web_sys;
 extern crate rustfft;
 extern crate serde_derive;
 
-use std::f64;
 use wasm_bindgen::JsCast;
-
 use wasm_bindgen::prelude::*;
 use web_sys::{
   console,
@@ -250,6 +248,52 @@ impl FmOsc {
 
     canvas_ctx.line_to(WIDTH, HEIGHT / 2.0f64);
     canvas_ctx.stroke();
+  }
+
+  pub fn draw_bars(&mut self) {
+    let document = web_sys::window().unwrap().document().unwrap();
+    let canvas = document.get_element_by_id("spectrum").unwrap();
+    let canvas: web_sys::HtmlCanvasElement = canvas
+        .dyn_into::<web_sys::HtmlCanvasElement>()
+        .map_err(|_| ())
+        .unwrap();
+    let canvas_ctx = canvas
+        .get_context("2d")
+        .unwrap()
+        .unwrap()
+        .dyn_into::<web_sys::CanvasRenderingContext2d>()
+        .unwrap();
+
+    let buffer_length: usize = self.get_buffer_length() as usize;
+    let data: Vec<u8> = self.get_analyser_data_frequency();
+
+    let width: f64 = canvas.width().into();
+    let height: f64 = canvas.height().into();
+    let back_fill_style: JsValue = "rgb(200, 200, 200)".into();
+
+    // drawVisual = requestAnimationFrame(draw);
+    canvas_ctx.set_fill_style(&back_fill_style);
+    canvas_ctx.fill_rect(0.0f64, 0.0f64, width, height);
+
+    let bar_width: f64 = width / (buffer_length as f64);
+    let mut x: f64 = 0.;
+
+    // let min: JsValue = JsValue::from_serde(data.iter().min().unwrap()).unwrap().into();
+    // let max: JsValue = JsValue::from_serde(data.iter().max().unwrap()).unwrap().into();
+    // console::log_2(&"min".into(), &min);
+    // console::log_2(&"max".into(), &max);
+
+    for i in 0..buffer_length {
+      let bar_height: f64 = (data[i] as f64) / 255.;
+
+      let fill_style_str = &format!("rgb({},50,50)", (bar_height * 130.) + 100.);
+      let fill_style: JsValue = fill_style_str.into();
+      canvas_ctx.set_fill_style(&fill_style);
+      canvas_ctx.fill_rect(x, height - (bar_height * (height - 10.)), bar_width, bar_height * height);
+
+      x += bar_width + 1.;
+    }
+
   }
 
   #[wasm_bindgen]
