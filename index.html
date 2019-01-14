@@ -1,0 +1,65 @@
+<html lang="EN">
+<head>
+</head>
+
+<body>
+  <div class="controls">
+    <div class="transport">
+      <span class="cs_title">transport</span>
+
+      <div class="cs_section"></div>
+      <div class="cs_section">
+        <input id="play" type="button" value="start wave ⏯"/>
+      </div>
+    </div>
+
+    <div class="synth">
+      <div class="cs_section osc1">
+        <span class="cs_title">OSC1</span>
+
+        <select id="osc1_wave" name="wavetype">
+          <option value="sin">sin</option>
+          <option value="sqr">square</option>
+          <option value="tri">triangle</option>
+          <option value="saw">saw</option>
+        </select>
+
+        <span id="osc1_gain" class="knob" >osc1 gain</span>
+        <span id="osc1_bypass" class="knob" >osc1 bypass</span>
+      </div>
+
+      <div class="cs_section osc2">
+        <span class="cs_title">OSC2</span>
+
+        <select id="osc2_wave" name="wavetype">
+          <option value="sin">sin</option>
+          <option value="sqr">square</option>
+          <option value="tri">triangle</option>
+          <option value="saw">saw</option>
+        </select>
+
+        <span id="osc2_gain" class="knob" >osc2 gain</span>
+        <span id="osc2_bypass" class="knob" >osc2 bypass</span>
+      </div>
+
+      <div class="cs_section fm_matrix">
+        <span class="cs_title">FM Matrix</span>
+
+        <span id="fm_osc1_osc1" class="knob" >OSC1 -> OSC1</span>
+        <span id="fm_osc2_osc1" class="knob" >OSC2 -> OSC1</span>
+        <span id="fm_osc1_osc2" class="knob" >OSC1 -> OSC2</span>
+        <span id="fm_osc2_osc2" class="knob" >OSC2 -> OSC2</span>
+      </div>
+
+      <div class="cs_section cs_master">
+        <span class="cs_title">Master</span>
+
+        <span id="ms_gain" class="knob" >Master</span>
+      </div>
+    </div>
+  </div>
+
+  <canvas id="spectrum" width="600px" height="800px" />
+
+<script type="text/javascript" src="index.js"></script></body>
+</html>
