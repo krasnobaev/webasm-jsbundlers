@@ -621,6 +621,7 @@ pub fn draw_f (
 
     // look up where the vertex data needs to go
     let position_location: u32 = context.get_attrib_location(&program, "a_position") as u32;
+    let bar_scale: u32 = context.get_attrib_location(&program, "a_scale") as u32;
 
     // set the resolution
     let ures = context.get_uniform_location(&program, "u_resolution");
@@ -644,10 +645,25 @@ pub fn draw_f (
     context.clear_color(0.0, 0.0, 0.0, 1.0);
     context.clear(WebGlRenderingContext::COLOR_BUFFER_BIT);
 
-    set_f_geometry(context)?;
+    init_f_buffers(context)?;
 
+    // enable vertices
     context.enable_vertex_attrib_array(position_location);
-    context.vertex_attrib_pointer_with_i32(position_location, 2, WebGlRenderingContext::FLOAT, false, 0, 0);
+    context.vertex_attrib_pointer_with_i32(
+      position_location, 2, WebGlRenderingContext::UNSIGNED_BYTE, false, 0, 0
+    );
+
+    // enable colors
+    context.enable_vertex_attrib_array(bar_scale);
+    context.vertex_attrib_pointer_with_i32(
+      bar_scale, 1, WebGlRenderingContext::UNSIGNED_BYTE, true, 0, 0
+    );
+
+    // enable indices
+    // context.enable_vertex_attrib_array(position_location???);
+    // context.vertex_attrib_pointer_with_i32(
+    //   position_location???, 2, WebGlRenderingContext::UNSIGNED_BYTE, false, 0, 0
+    // );
 
     context.draw_arrays(
         WebGlRenderingContext::TRIANGLES,
@@ -658,33 +674,34 @@ pub fn draw_f (
     Ok(())
 }
 
-pub fn set_f_geometry(
+pub fn init_f_buffers(
   context: &WebGlRenderingContext
 ) -> Result<(), JsValue> {
-  let vertices: [f32; 36] = [
-    // left column - 6
-    0.0, 0.0,
-    30.0, 0.0,
-    0.0, 150.0,
-    0.0, 150.0,
-    30.0, 0.0,
-    30.0, 150.0,
+  // set vertices
+  let vertices: [u8; 36] = [
+    // first bar column - 6
+    0, 0,
+    30, 0,
+    0, 150,
+    0, 150,
+    30, 0,
+    30, 150,
 
-    // top rung - 6
-    30.0, 0.0,
-    100.0, 0.0,
-    30.0, 30.0,
-    30.0, 30.0,
-    100.0, 0.0,
-    100.0, 30.0,
+    // second bar column - 6
+    40, 0,
+    70, 0,
+    40, 150,
+    40, 150,
+    70, 0,
+    70, 150,
 
-    // middle rung - 6
-    30.0, 60.0,
-    67.0, 60.0,
-    30.0, 90.0,
-    30.0, 90.0,
-    67.0, 60.0,
-    67.0, 90.0,
+    // third bar column - 6
+    80, 0,
+    110, 0,
+    80, 150,
+    80, 150,
+    110, 0,
+    110, 150,
   ];
 
   let memory_buffer = wasm_bindgen::memory()
@@ -692,7 +709,7 @@ pub fn set_f_geometry(
       .buffer();
   let vertices_location = vertices.as_ptr() as u32 / 4;
   let vert_array = js_sys::Float32Array::new(&memory_buffer)
-      .subarray(vertices_location, vertices_location + vertices.len() as u32);
+      .subarray(vertices_location, vertices_location + 36u32);
 
   let buffer = context.create_buffer().ok_or("failed to create buffer")?;
   context.bind_buffer(WebGlRenderingContext::ARRAY_BUFFER, Some(&buffer));
@@ -701,6 +718,59 @@ pub fn set_f_geometry(
       &vert_array,
       WebGlRenderingContext::STATIC_DRAW,
   );
+
+  // set colors
+  // let colors: [f32; 12] = [
+  //   0.3, 0.3, 0.3, 0.3,
+  //   0.6, 0.6, 0.6, 0.6,
+  //   0.9, 0.9, 0.9, 0.9,
+  // ];
+
+  // let colors_mem_buffer = wasm_bindgen::memory()
+  //     .dyn_into::<WebAssembly::Memory>()?
+  //     .buffer();
+  // let colors_location = colors.as_ptr() as u32 / 2;
+  // let colors_array = js_sys::Float32Array::new(&colors_mem_buffer)
+  //     .subarray(colors_location, colors_location + colors.len() as u32);
+
+  // let colors_buffer = context.create_buffer().ok_or("failed to create buffer")?;
+  // context.bind_buffer(WebGlRenderingContext::ARRAY_BUFFER, Some(&colors_buffer));
+  // context.buffer_data_with_array_buffer_view(
+  //     WebGlRenderingContext::ARRAY_BUFFER,
+  //     &colors_array,
+  //     WebGlRenderingContext::STATIC_DRAW,
+  // );
+
+  // set indices
+  // let indices: [u8; 18] = [
+  //   // first bar column - 6
+  //   1, 2, 3, 4, 5, 6,
+  //   // second bar column - 6
+  //   7, 8, 9, 10, 11, 12,
+  //   // third bar column - 6
+  //   13, 14, 15, 16, 17, 18,
+  // ];
+
+  // let memory_buffer = wasm_bindgen::memory()
+  //     .dyn_into::<WebAssembly::Memory>()?
+  //     .buffer();
+  // let indices_location = indices.as_ptr() as u32 / 4;
+  // let indc_array = js_sys::Uint8Array::new(&memory_buffer)
+  //     .subarray(indices_location, indices_location + indices.len() as u32);
+
+  // let buffer = context.create_buffer().ok_or("failed to create buffer")?;
+  // context.bind_buffer(WebGlRenderingContext::ELEMENT_ARRAY_BUFFER, Some(&buffer));
+  // context.buffer_data_with_array_buffer_view(
+  //     WebGlRenderingContext::ELEMENT_ARRAY_BUFFER,
+  //     &indc_array,
+  //     WebGlRenderingContext::STATIC_DRAW,
+  // );
+
+  // set indices
+  // context.vertex_attrib_pointer_with_i32(
+  //   position_location, 2, WebGlRenderingContext::UNSIGNED_BYTE, false, 0, 0
+  // );
+  // context.enable_vertex_attrib_array(position_location);
 
   Ok(())
 }
