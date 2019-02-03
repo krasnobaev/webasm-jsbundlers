@@ -23,6 +23,11 @@ use rustfft::num_traits::Zero;
 
 use js_sys::WebAssembly;
 
+static F_VERTEX_SHADER: &'static str = include_str!("shaders/F_v.glsl");
+static F_FRAGMENT_SHADER: &'static str = include_str!("shaders/F_f.glsl");
+static TRI_VERTEX_SHADER: &'static str = include_str!("shaders/tri_v.glsl");
+static TRI_FRAGMENT_SHADER: &'static str = include_str!("shaders/tri_f.glsl");
+
 /*
  * DFT
  */
@@ -529,55 +534,175 @@ pub fn drawwebgl() -> Result<(), JsValue> {
         .unwrap()
         .dyn_into::<WebGlRenderingContext>()?;
 
+    // draw_triangle(&context)?;
+    draw_f(&context,
+      canvas.width() as f32, canvas.height() as f32,
+      20.0, 80.0
+    )?;
+
+    Ok(())
+}
+
+pub fn draw_triangle (
+  context: &WebGlRenderingContext
+) -> Result<(), JsValue> {
     let vert_shader = compile_shader(
         &context,
         WebGlRenderingContext::VERTEX_SHADER,
-        r#"
-        attribute vec4 position;
-        void main() {
-            gl_Position = position;
-        }
-    "#,
+        TRI_VERTEX_SHADER,
     )?;
     let frag_shader = compile_shader(
         &context,
         WebGlRenderingContext::FRAGMENT_SHADER,
-        r#"
-          void main() {
-            gl_FragColor = vec4(1.0, 0.2, 0.3, 1.0);
-          }
-    "#,
+        TRI_FRAGMENT_SHADER,
     )?;
+
     let program = link_program(&context, [vert_shader, frag_shader].iter())?;
     context.use_program(Some(&program));
-
-    let vertices: [f32; 9] = [-0.7, -0.7, 0.0, 0.7, -0.7, 0.0, 0.0, 0.7, 0.0];
-    let memory_buffer = wasm_bindgen::memory()
-        .dyn_into::<WebAssembly::Memory>()?
-        .buffer();
-    let vertices_location = vertices.as_ptr() as u32 / 4;
-    let vert_array = js_sys::Float32Array::new(&memory_buffer)
-        .subarray(vertices_location, vertices_location + vertices.len() as u32);
-
-    let buffer = context.create_buffer().ok_or("failed to create buffer")?;
-    context.bind_buffer(WebGlRenderingContext::ARRAY_BUFFER, Some(&buffer));
-    context.buffer_data_with_array_buffer_view(
-        WebGlRenderingContext::ARRAY_BUFFER,
-        &vert_array,
-        WebGlRenderingContext::STATIC_DRAW,
-    );
-    context.vertex_attrib_pointer_with_i32(0, 3, WebGlRenderingContext::FLOAT, false, 0, 0);
-    context.enable_vertex_attrib_array(0);
 
     context.clear_color(0.0, 0.0, 0.0, 1.0);
     context.clear(WebGlRenderingContext::COLOR_BUFFER_BIT);
 
+    set_tri_geometry(context)?;
+
+    Ok(())
+}
+
+pub fn set_tri_geometry(
+  context: &WebGlRenderingContext
+) -> Result<(), JsValue> {
+  let vertices: [f32; 9] = [-0.7, -0.7, 0.0, 0.7, -0.7, 0.0, 0.0, 0.7, 0.0];
+  let memory_buffer = wasm_bindgen::memory()
+      .dyn_into::<WebAssembly::Memory>()?
+      .buffer();
+  let vertices_location = vertices.as_ptr() as u32 / 4;
+  let vert_array = js_sys::Float32Array::new(&memory_buffer)
+      .subarray(vertices_location, vertices_location + vertices.len() as u32);
+
+  let buffer = context.create_buffer().ok_or("failed to create buffer")?;
+  context.bind_buffer(WebGlRenderingContext::ARRAY_BUFFER, Some(&buffer));
+  context.buffer_data_with_array_buffer_view(
+      WebGlRenderingContext::ARRAY_BUFFER,
+      &vert_array,
+      WebGlRenderingContext::STATIC_DRAW,
+  );
+  context.vertex_attrib_pointer_with_i32(0, 3, WebGlRenderingContext::FLOAT, false, 0, 0);
+  context.enable_vertex_attrib_array(0);
+
+  context.draw_arrays(
+      WebGlRenderingContext::TRIANGLES,
+      0,
+      (vertices.len() / 3) as i32,
+  );
+
+  Ok(())
+}
+
+pub fn draw_f (
+  context: &WebGlRenderingContext,
+  width: f32,
+  height: f32,
+  translationx: f32,
+  translationy: f32,
+) -> Result<(), JsValue> {
+    let vert_shader = compile_shader(
+        &context,
+        WebGlRenderingContext::VERTEX_SHADER,
+        F_VERTEX_SHADER,
+    )?;
+    let frag_shader = compile_shader(
+        &context,
+        WebGlRenderingContext::FRAGMENT_SHADER,
+        F_FRAGMENT_SHADER,
+    )?;
+
+    let program = link_program(&context, [vert_shader, frag_shader].iter())?;
+    context.use_program(Some(&program));
+
+    // look up where the vertex data needs to go
+    let position_location: u32 = context.get_attrib_location(&program, "a_position") as u32;
+
+    // set the resolution
+    let ures = context.get_uniform_location(&program, "u_resolution");
+    context.uniform2f(ures.as_ref(), width, height);
+
+    // set the color
+    let uloc = context.get_uniform_location(&program, "u_color");
+    let mut color: [f32; 4] = [0.1, 0.2, 0.3, 0.4];
+    context.uniform4fv_with_f32_array(uloc.as_ref(), &mut color);
+
+    // Set the translation
+    let utrans = context.get_uniform_location(&program, "u_translation");
+    let mut translation: [f32; 2] = [translationx, translationy];
+    context.uniform2fv_with_f32_array(utrans.as_ref(), &mut translation);
+
+    // position buffer
+    let buffer = context.create_buffer().ok_or("failed to create buffer")?;
+    context.bind_buffer(WebGlRenderingContext::ARRAY_BUFFER, Some(&buffer));
+
+    // cleanup
+    context.clear_color(0.0, 0.0, 0.0, 1.0);
+    context.clear(WebGlRenderingContext::COLOR_BUFFER_BIT);
+
+    set_f_geometry(context)?;
+
+    context.enable_vertex_attrib_array(position_location);
+    context.vertex_attrib_pointer_with_i32(position_location, 2, WebGlRenderingContext::FLOAT, false, 0, 0);
+
     context.draw_arrays(
         WebGlRenderingContext::TRIANGLES,
         0,
-        (vertices.len() / 3) as i32,
+        18, // (vertices.len() / 2) as i32,
     );
+
     Ok(())
+}
+
+pub fn set_f_geometry(
+  context: &WebGlRenderingContext
+) -> Result<(), JsValue> {
+  let vertices: [f32; 36] = [
+    // left column - 6
+    0.0, 0.0,
+    30.0, 0.0,
+    0.0, 150.0,
+    0.0, 150.0,
+    30.0, 0.0,
+    30.0, 150.0,
+
+    // top rung - 6
+    30.0, 0.0,
+    100.0, 0.0,
+    30.0, 30.0,
+    30.0, 30.0,
+    100.0, 0.0,
+    100.0, 30.0,
+
+    // middle rung - 6
+    30.0, 60.0,
+    67.0, 60.0,
+    30.0, 90.0,
+    30.0, 90.0,
+    67.0, 60.0,
+    67.0, 90.0,
+  ];
+
+  let memory_buffer = wasm_bindgen::memory()
+      .dyn_into::<WebAssembly::Memory>()?
+      .buffer();
+  let vertices_location = vertices.as_ptr() as u32 / 4;
+  let vert_array = js_sys::Float32Array::new(&memory_buffer)
+      .subarray(vertices_location, vertices_location + vertices.len() as u32);
+
+  let buffer = context.create_buffer().ok_or("failed to create buffer")?;
+  context.bind_buffer(WebGlRenderingContext::ARRAY_BUFFER, Some(&buffer));
+  context.buffer_data_with_array_buffer_view(
+      WebGlRenderingContext::ARRAY_BUFFER,
+      &vert_array,
+      WebGlRenderingContext::STATIC_DRAW,
+  );
+
+  Ok(())
 }
 
 pub fn compile_shader(
