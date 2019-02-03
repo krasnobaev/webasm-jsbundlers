@@ -40,5 +40,10 @@ features = [
   'GainNode',
   'OscillatorNode',
   'OscillatorType',
-  'PeriodicWave'
+  'PeriodicWave',
+
+  'WebGlBuffer',
+  'WebGlRenderingContext',
+  'WebGlProgram',
+  'WebGlShader',
 ]

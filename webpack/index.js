@@ -218,6 +218,8 @@ import('./pkg')
     fm.set_osc2_wave_type(this.value);
   });
 
+  module.drawwebgl();
+
 })
 .catch(console.error);
 
