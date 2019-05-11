@@ -23,10 +23,15 @@ use rustfft::num_traits::Zero;
 
 use js_sys::WebAssembly;
 
+extern crate nalgebra_glm as glm;
+use glm::Mat4;
+
 static F_VERTEX_SHADER: &'static str = include_str!("shaders/F_v.glsl");
 static F_FRAGMENT_SHADER: &'static str = include_str!("shaders/F_f.glsl");
 static TRI_VERTEX_SHADER: &'static str = include_str!("shaders/tri_v.glsl");
 static TRI_FRAGMENT_SHADER: &'static str = include_str!("shaders/tri_f.glsl");
+static CUBE_VERTEX_SHADER: &'static str = include_str!("shaders/cube_v.glsl");
+static CUBE_FRAGMENT_SHADER: &'static str = include_str!("shaders/cube_f.glsl");
 
 /*
  * DFT
@@ -535,9 +540,12 @@ pub fn drawwebgl() -> Result<(), JsValue> {
         .dyn_into::<WebGlRenderingContext>()?;
 
     // draw_triangle(&context)?;
-    draw_f(&context,
-      canvas.width() as f32, canvas.height() as f32,
-      20.0, 80.0
+    // draw_f(&context,
+    //   canvas.width() as f32, canvas.height() as f32,
+    //   20.0, 80.0
+    // )?;
+    draw_cube(&context,
+      canvas.width() as f32, canvas.height() as f32
     )?;
 
     Ok(())
@@ -775,51 +783,329 @@ pub fn init_f_buffers(
   Ok(())
 }
 
+pub fn draw_cube (
+  context: &WebGlRenderingContext,
+  width: f32,
+  height: f32,
+) -> Result<(), JsValue> {
+  let cube_rotation = 0.3;
+
+  let vert_shader = compile_shader(
+      &context,
+      WebGlRenderingContext::VERTEX_SHADER,
+      CUBE_VERTEX_SHADER,
+  )?;
+  let frag_shader = compile_shader(
+      &context,
+      WebGlRenderingContext::FRAGMENT_SHADER,
+      CUBE_FRAGMENT_SHADER,
+  )?;
+
+  // Tell WebGL to use our program when drawing
+  let program = link_program(&context, [vert_shader, frag_shader].iter())?;
+
+  //
+  // fill vertices buffer
+  //
+
+  let vertices: [f32; 72] = [
+    // Front face
+    -1.0, -1.0,  1.0,
+    1.0, -1.0,  1.0,
+    1.0,  1.0,  1.0,
+    -1.0,  1.0,  1.0,
+
+    // Back face
+    -1.0, -1.0, -1.0,
+    -1.0,  1.0, -1.0,
+    1.0,  1.0, -1.0,
+    1.0, -1.0, -1.0,
+
+    // Top face
+    -1.0,  1.0, -1.0,
+    -1.0,  1.0,  1.0,
+    1.0,  1.0,  1.0,
+    1.0,  1.0, -1.0,
+
+    // Bottom face
+    -1.0, -1.0, -1.0,
+    1.0, -1.0, -1.0,
+    1.0, -1.0,  1.0,
+    -1.0, -1.0,  1.0,
+
+    // Right face
+    1.0, -1.0, -1.0,
+    1.0,  1.0, -1.0,
+    1.0,  1.0,  1.0,
+    1.0, -1.0,  1.0,
+
+    // Left face
+    -1.0, -1.0, -1.0,
+    -1.0, -1.0,  1.0,
+    -1.0,  1.0,  1.0,
+    -1.0,  1.0, -1.0,
+  ];
+
+  let position_buffer = context.create_buffer().ok_or("failed to create buffer")?;
+  context.bind_buffer(WebGlRenderingContext::ARRAY_BUFFER, Some(&position_buffer));
+
+  let position_memory_buffer = wasm_bindgen::memory()
+      .dyn_into::<WebAssembly::Memory>()?
+      .buffer();
+  let vertices_location = vertices.as_ptr() as u32 / 4;
+  let vert_array = js_sys::Float32Array::new(&position_memory_buffer)
+      .subarray(vertices_location, vertices_location + vertices.len() as u32);
+
+  context.buffer_data_with_array_buffer_view(
+      WebGlRenderingContext::ARRAY_BUFFER,
+      &vert_array,
+      WebGlRenderingContext::STATIC_DRAW,
+  );
+
+  //
+  // fill colors buffer
+  //
+
+  let colors: [f32; 24] = [
+    1.0,  1.0,  1.0,  1.0,    // Front face: white
+    1.0,  0.0,  0.0,  1.0,    // Back face: red
+    0.0,  1.0,  0.0,  1.0,    // Top face: green
+    0.0,  0.0,  1.0,  1.0,    // Bottom face: blue
+    1.0,  1.0,  0.0,  1.0,    // Right face: yellow
+    1.0,  0.0,  1.0,  1.0,    // Left face: purple
+  ];
+
+  let color_buffer = context.create_buffer().ok_or("failed to create buffer")?;
+  context.bind_buffer(WebGlRenderingContext::ARRAY_BUFFER, Some(&color_buffer));
+
+  let colors_memory_buffer = wasm_bindgen::memory()
+      .dyn_into::<WebAssembly::Memory>()?
+      .buffer();
+  let colors_location = vertices.as_ptr() as u32 / 4;
+  let colors_array = js_sys::Float32Array::new(&colors_memory_buffer)
+      .subarray(colors_location, colors_location + colors.len() as u32);
+
+  context.buffer_data_with_array_buffer_view(
+      WebGlRenderingContext::ARRAY_BUFFER,
+      &colors_array,
+      WebGlRenderingContext::STATIC_DRAW,
+  );
+
+  //
+  // fill indices buffer
+  //
+
+  let indices: [i8; 36] = [
+    0,  1,  2,      0,  2,  3,    // front
+    4,  5,  6,      4,  6,  7,    // back
+    8,  9,  10,     8,  10, 11,   // top
+    12, 13, 14,     12, 14, 15,   // bottom
+    16, 17, 18,     16, 18, 19,   // right
+    20, 21, 22,     20, 22, 23,   // left
+  ];
+
+  let ind_buffer = context.create_buffer().ok_or("failed to create buffer")?;
+  context.bind_buffer(WebGlRenderingContext::ELEMENT_ARRAY_BUFFER, Some(&ind_buffer));
+
+  let inds_memory_buffer = wasm_bindgen::memory()
+      .dyn_into::<WebAssembly::Memory>()?
+      .buffer();
+  let inds_location = indices.as_ptr() as u32 / 4;
+  let inds_array = js_sys::Uint16Array::new(&inds_memory_buffer)
+      .subarray(inds_location, inds_location + indices.len() as u32);
+
+  context.buffer_data_with_array_buffer_view(
+      WebGlRenderingContext::ELEMENT_ARRAY_BUFFER,
+      &inds_array,
+      WebGlRenderingContext::STATIC_DRAW,
+  );
+
+  //
+  // draw the scene
+  //
+
+  // Clear to black, fully opaque
+  context.clear_color(0.0, 0.0, 0.0, 1.0);
+  // Clear everything
+  context.clear_depth(1.0);
+  // Enable depth testing
+  context.enable(WebGlRenderingContext::DEPTH_TEST);
+  // Near things obscure far things
+  context.depth_func(WebGlRenderingContext::LEQUAL);
+  // Clear the canvas before we start drawing on it.
+  context.clear(WebGlRenderingContext::COLOR_BUFFER_BIT);
+
+  //
+  // calc perspective and rotation
+  //
+
+  // Create a perspective matrix, a special matrix that is
+  // used to simulate the distortion of perspective in a camera.
+  // Our field of view is 45 degrees, with a width/height
+  // ratio that matches the display size of the canvas
+  // and we only want to see objects between 0.1 units
+  // and 100 units away from the camera.
+
+  let field_of_view = 45.0 * std::f32::consts::PI / 180.0;   // in radians
+  let aspect = width / height;
+  let z_near = 0.1;
+  let z_far = 100.0;
+  let projection_matrix_data = glm::perspective(field_of_view, aspect, z_near, z_far);
+
+  let mut model_view_matrix_data = Mat4::identity();
+  let translation = glm::vec3(-0.0, 0.0, -6.0);
+  model_view_matrix_data = glm::translate(&model_view_matrix_data, &translation);
+  model_view_matrix_data = glm::rotate_z(&model_view_matrix_data, cube_rotation);
+  model_view_matrix_data = glm::rotate_x(&model_view_matrix_data, cube_rotation * 0.7);
+
+  //
+  // aVertexPosition
+  //
+
+  // Tell WebGL how to pull out the positions from the position
+  // buffer into the vertexPosition attribute
+  let num_components = 3;
+  let normalize = false;
+  let stride = 0;
+  let offset = 0;
+  let vertex_position: u32 = context.get_attrib_location(&program, "aVertexPosition") as u32;
+  context.bind_buffer(WebGlRenderingContext::ARRAY_BUFFER, Some(&position_buffer));
+  context.vertex_attrib_pointer_with_i32(
+      vertex_position,
+      num_components,
+      WebGlRenderingContext::FLOAT,
+      normalize,
+      stride,
+      offset);
+  context.enable_vertex_attrib_array(vertex_position);
+
+  //
+  // aVertexColor
+  //
+
+  // Tell WebGL how to pull out the colors from the color buffer
+  // into the vertexColor attribute.
+  let num_components = 4;
+  let normalize = false;
+  let stride = 0;
+  let offset = 0;
+  let vertex_color: u32 = context.get_attrib_location(&program, "aVertexColor") as u32;
+  context.bind_buffer(WebGlRenderingContext::ARRAY_BUFFER, Some(&color_buffer));
+  context.vertex_attrib_pointer_with_i32(
+      vertex_color,
+      num_components,
+      WebGlRenderingContext::FLOAT,
+      normalize,
+      stride,
+      offset);
+  context.enable_vertex_attrib_array(vertex_color);
+
+  // Tell WebGL which indices to use to index the vertices
+  context.bind_buffer(WebGlRenderingContext::ELEMENT_ARRAY_BUFFER, Some(&ind_buffer));
+
+  // Tell WebGL to use our program when drawing
+  context.use_program(Some(&program));
+
+  //
+  // Set the shader uniforms
+  //
+
+  // uProjectionMatrix
+  let projection_matrix = context.get_uniform_location(&program, "uProjectionMatrix");
+  // let mut projection_matrix_data_static: [f32; 16] = [
+  //   1.81,  0.0,    0.0,   0.0,
+  //    0.0, 2.41,    0.0,   0.0,
+  //    0.0,  0.0,  -1.00,  -1.0,
+  //    0.0,  0.0, -0.200,   0.0,
+  // ];
+  context.uniform_matrix4fv_with_f32_array(
+      projection_matrix.as_ref(),
+      false,
+      &mut flatten(projection_matrix_data),
+      // &mut projection_matrix_data_static,
+  );
+
+  // uModelViewMatrix
+  let model_view_matrix = context.get_uniform_location(&program, "uModelViewMatrix");
+  // let mut model_view_matrix_data_static: [f32; 16] = [
+  //   -0.36,  0.42, -0.82, 0.00,
+  //   -0.75, -0.65,  0.00, 0.00,
+  //   -0.53,  0.62,  0.56, 0.00,
+  //    0.00,  0.00, -6.00, 1.00,
+  // ];
+  context.uniform_matrix4fv_with_f32_array(
+      model_view_matrix.as_ref(),
+      false,
+      &mut flatten(model_view_matrix_data),
+      // &mut model_view_matrix_data_static,
+  );
+
+  //
+  // Draw
+  //
+
+  context.draw_elements_with_i32(
+      WebGlRenderingContext::TRIANGLES,
+      36, // vertexCount
+      WebGlRenderingContext::UNSIGNED_SHORT,
+      0 // offset
+  );
+
+  Ok(())
+}
+
+pub fn flatten (data: Mat4) -> Vec<f32> {
+  data.iter()
+      // .flat_map(|array| array.as_array().iter())
+      .cloned()
+      .collect()
+}
+
 pub fn compile_shader(
     context: &WebGlRenderingContext,
     shader_type: u32,
     source: &str,
 ) -> Result<WebGlShader, String> {
-    let shader = context
-        .create_shader(shader_type)
-        .ok_or_else(|| String::from("Unable to create shader object"))?;
-    context.shader_source(&shader, source);
-    context.compile_shader(&shader);
+  let shader = context
+      .create_shader(shader_type)
+      .ok_or_else(|| String::from("Unable to create shader object"))?;
+  context.shader_source(&shader, source);
+  context.compile_shader(&shader);
 
-    if context
-        .get_shader_parameter(&shader, WebGlRenderingContext::COMPILE_STATUS)
-        .as_bool()
-        .unwrap_or(false)
-    {
-        Ok(shader)
-    } else {
-        Err(context
-            .get_shader_info_log(&shader)
-            .unwrap_or_else(|| "Unknown error creating shader".into()))
-    }
+  if context
+      .get_shader_parameter(&shader, WebGlRenderingContext::COMPILE_STATUS)
+      .as_bool()
+      .unwrap_or(false)
+  {
+    Ok(shader)
+  } else {
+    Err(context
+        .get_shader_info_log(&shader)
+        .unwrap_or_else(|| "Unknown error creating shader".into()))
+  }
 }
 
 pub fn link_program<'a, T: IntoIterator<Item = &'a WebGlShader>>(
     context: &WebGlRenderingContext,
     shaders: T,
 ) -> Result<WebGlProgram, String> {
-    let program = context
-        .create_program()
-        .ok_or_else(|| String::from("Unable to create shader object"))?;
-    for shader in shaders {
-        context.attach_shader(&program, shader)
-    }
-    context.link_program(&program);
+  let program = context
+      .create_program()
+      .ok_or_else(|| String::from("Unable to create shader object"))?;
+  for shader in shaders {
+    context.attach_shader(&program, shader)
+  }
+  context.link_program(&program);
 
-    if context
-        .get_program_parameter(&program, WebGlRenderingContext::LINK_STATUS)
-        .as_bool()
-        .unwrap_or(false)
-    {
-        Ok(program)
-    } else {
-        Err(context
-            .get_program_info_log(&program)
-            .unwrap_or_else(|| "Unknown error creating program object".into()))
-    }
+  if context
+      .get_program_parameter(&program, WebGlRenderingContext::LINK_STATUS)
+      .as_bool()
+      .unwrap_or(false)
+  {
+    Ok(program)
+  } else {
+    Err(context
+        .get_program_info_log(&program)
+        .unwrap_or_else(|| "Unknown error creating program object".into()))
+  }
 }

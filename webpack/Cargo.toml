@@ -15,6 +15,7 @@ js-sys = "^0.3.6"
 serde = "^1.0.80"
 serde_derive = "^1.0.80"
 rustfft = { git = "https://github.com/FauxFaux/rustfft", branch = "bump-complex" }
+nalgebra-glm = "^0.3"
 
 [dependencies.wasm-bindgen]
 version = "^0.2.29"

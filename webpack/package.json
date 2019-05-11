@@ -14,6 +14,7 @@
     "create-rust-webpack": ".bin/create-rust-webpack.js"
   },
   "devDependencies": {
+    "@babel/plugin-syntax-dynamic-import": "^7.2.0",
     "@wasm-tool/wasm-pack-plugin": "0.1.6",
     "@webpack-cli/init": "^0.1.2",
     "css-loader": "^2.0.0",
