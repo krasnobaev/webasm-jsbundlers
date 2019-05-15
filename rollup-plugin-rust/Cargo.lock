@@ -1,4 +1,4 @@
 [[package]]
-name = "node-wasm"
-version = "0.1.0"
+name = "rollup_plugin_rust_example"
+version = "0.0.1"
 

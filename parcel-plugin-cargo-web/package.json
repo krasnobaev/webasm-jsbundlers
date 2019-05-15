@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "build": "parcel build index.html",
     "start": "parcel --no-cache index.html",
     "clean": "rm -r .cache dist target"
   },

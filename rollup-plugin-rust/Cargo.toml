@@ -1,12 +1,10 @@
 [package]
 name = "rollup_plugin_rust_example"
 version = "0.0.1"
+authors = ["Aleksey Krasnobaev <alekseykrasnobaev@gmail.com>"]
 
 [lib]
 crate-type = ["cdylib"]
 path = "./lib.rs"
-
-[profile.release]
-lto = true
 
 [dependencies]
