@@ -9,7 +9,7 @@ export default [
     entry: './index.js',
     output: {
       // dir: 'dist',
-      file: 'dist/index.js',
+      file: 'dist/index.js', // make sure dist folder is exist
       format: 'cjs'
     },
     plugins: [

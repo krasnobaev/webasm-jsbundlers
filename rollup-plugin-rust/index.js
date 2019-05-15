@@ -8,7 +8,5 @@ async function init() {
 
 init().then(({ add, greet }) => {
   // greet('John Doe');
-  alert(`a=${a}, b=${b}, a+b=${add(a, b)}`);
+  alert(`a=1, b=2, a+b=${add(1, 2)}`);
 });
-
-// export default init;

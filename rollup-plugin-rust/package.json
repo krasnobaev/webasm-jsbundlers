@@ -4,7 +4,7 @@
   "description": "",
   "main": "dist/index.js",
   "scripts": {
-    "build": "mkdir -p dist && rollup -c rollup-build.config.js",
+    "build": "rollup -c rollup-build.config.js",
     "start": "rollup -c",
     "clean": "rm -r dist target"
   },

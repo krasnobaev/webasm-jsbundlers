@@ -6,6 +6,6 @@ npm run build || true
 cd ../parcel-plugin-wasm.rs
 npm run build || true
 cd ../rollup-plugin-rust
-npm run build || true
+mkdir -p dist && npm run build || true
 cd ../webpack
 npm run build || true
