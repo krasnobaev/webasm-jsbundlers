@@ -1,6 +1,4 @@
-import livereload from 'rollup-plugin-livereload';
 import rust from 'rollup-plugin-rust';
-import serve from 'rollup-plugin-serve';
 import htmlTemplate from 'rollup-plugin-generate-html-template';
 
 export default [
